@@ -43,7 +43,11 @@ export default function WorkflowGenerator() {
 
       if (data.executable_code && data.tool_config) {
         setExecutableCode(data.executable_code);
-        setToolConfig(data.tool_config);
+        // Ensure tool_config is properly formatted as JSON string
+        setToolConfig(typeof data.tool_config === 'string' 
+          ? data.tool_config 
+          : JSON.stringify(data.tool_config, null, 2)
+        );
       } else if (data.raw_response) {
         setExecutableCode(data.raw_response);
         setToolConfig("See executable code for complete configuration");

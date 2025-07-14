@@ -32,9 +32,10 @@ IMPORTANT: Return ONLY a valid JSON object with these two fields:
 Do NOT include any markdown formatting, code blocks, or explanatory text. Return ONLY the JSON object.
 
 The executable code should:
-- Parse the workflow description into appropriate API calls
-- Handle the workflow execution logic
-- Return structured results
+- Call the Vercel API endpoint: https://scaffold-ai-test1.vercel.app/api/execute-workflow
+- Send the workflow description and parameters
+- Handle the response and return results
+- NOT call Paradigm APIs directly (the Vercel endpoint handles that)
 
 The tool config should include:
 - name: Descriptive name for the tool
@@ -46,14 +47,14 @@ The tool config should include:
 
 Example response format:
 {
-  "executable_code": "// JavaScript code here",
+  "executable_code": "async function executeWorkflow(question) { const response = await fetch('https://scaffold-ai-test1.vercel.app/api/execute-workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workflow_type: 'multi_step_workflow', parameters: { steps: [...] } }) }); return response.json(); }",
   "tool_config": {
-    "name": "Tool Name",
-    "description": "Tool description",
+    "name": "Scaffold AI Workflow Executor",
+    "description": "Executes AI workflows by calling the Scaffold.ai API endpoint which handles Paradigm API integration",
     "http_method": "POST",
     "url": "https://scaffold-ai-test1.vercel.app/api/execute-workflow",
     "headers": {"Authorization": "Bearer YOUR_API_KEY"},
-    "body_params": {"param": "value"}
+    "body_params": {"workflow_type": "string", "parameters": "object"}
   }
 }`;
 
@@ -71,7 +72,7 @@ Example response format:
         messages: [
           {
             role: 'system',
-            content: 'You are an expert in workflow automation and API integration. Return ONLY valid JSON without any markdown formatting or explanatory text.'
+            content: 'You are an expert in workflow automation and API integration. Return ONLY valid JSON without any markdown formatting or explanatory text. The executable code should call the Vercel API endpoint, not Paradigm APIs directly.'
           },
           {
             role: 'user',
