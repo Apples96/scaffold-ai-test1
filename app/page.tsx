@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { ArrowRight, Zap, Shield, Clock, BarChart3, Users, CheckCircle } from 'lucide-react'
+import { ArrowRight, Zap, Shield, Clock, BarChart3, Users, CheckCircle, ChevronRight } from 'lucide-react'
 import EmailSignup from './components/EmailSignup'
 
 export default function Home() {
@@ -36,15 +36,15 @@ export default function Home() {
               <span className="text-gradient block">Processes into AI</span>
               Automation
             </h1>
-            <p className="text-xl md:text-2xl text-white/70 mb-12 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-white/70 mb-10 max-w-4xl mx-auto leading-relaxed">
               Describe your step-by-step workflow and let our AI build the scaffolding for reliable, automated execution.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <button className="btn-primary text-lg px-10 py-4">
-                Get Started Free
-                <ArrowRight className="ml-2 h-5 w-5" />
+            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <button className="btn-primary text-base px-7 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 shadow-none hover:shadow-md transition-all group">
+                <span>Get Started Free</span>
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </button>
-              <button className="btn-secondary text-lg px-10 py-4">
+              <button className="btn-secondary text-base px-7 py-3 rounded-lg font-semibold flex items-center gap-2 border border-white/20 hover:border-white/40 transition-all">
                 Watch Demo
               </button>
             </div>
