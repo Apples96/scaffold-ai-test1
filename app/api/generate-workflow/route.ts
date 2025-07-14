@@ -34,6 +34,7 @@ Do NOT include any markdown formatting, code blocks, or explanatory text. Return
 The executable code should:
 - Call the Vercel API endpoint: https://scaffold-ai-test1.vercel.app/api/execute-workflow
 - Send the workflow description and parameters
+- Stringify the parameters object before sending (Paradigm UI only supports string, not object, for body params)
 - Handle the response and return results
 - NOT call Paradigm APIs directly (the Vercel endpoint handles that)
 
@@ -43,18 +44,18 @@ The tool config should include:
 - http_method: POST
 - url: https://scaffold-ai-test1.vercel.app/api/execute-workflow
 - headers: Authorization header for API key
-- body_params: Parameters needed for the workflow
+- body_params: Parameters needed for the workflow (parameters must be type 'string' due to Paradigm UI limitation)
 
 Example response format:
 {
-  "executable_code": "async function executeWorkflow(question) { const response = await fetch('https://scaffold-ai-test1.vercel.app/api/execute-workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workflow_type: 'multi_step_workflow', parameters: { steps: [...] } }) }); return response.json(); }",
+  "executable_code": "async function executeWorkflow(question) { const response = await fetch('https://scaffold-ai-test1.vercel.app/api/execute-workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workflow_type: 'multi_step_workflow', parameters: JSON.stringify({ steps: [...] }) }) }); return response.json(); }",
   "tool_config": {
     "name": "Scaffold AI Workflow Executor",
     "description": "Executes AI workflows by calling the Scaffold.ai API endpoint which handles Paradigm API integration",
     "http_method": "POST",
     "url": "https://scaffold-ai-test1.vercel.app/api/execute-workflow",
     "headers": {"Authorization": "Bearer YOUR_API_KEY"},
-    "body_params": {"workflow_type": "string", "parameters": "object"}
+    "body_params": {"workflow_type": "string", "parameters": "string"}
   }
 }`;
 

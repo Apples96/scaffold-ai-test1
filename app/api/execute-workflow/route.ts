@@ -3,6 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
   try {
     const { workflow_type, parameters } = await req.json();
+    // If parameters is a string (Paradigm workaround), parse it as JSON
+    let parsedParameters = parameters;
+    if (typeof parameters === 'string') {
+      try {
+        parsedParameters = JSON.parse(parameters);
+      } catch (e) {
+        return NextResponse.json({ error: 'Invalid parameters: could not parse JSON string.' }, { status: 400 });
+      }
+    }
     
     // Paradigm API configuration
     const PARADIGM_API_KEY = process.env.PARADIGM_API_KEY;
@@ -17,16 +26,16 @@ export async function POST(req: NextRequest) {
     // Execute different workflow types by calling appropriate Paradigm endpoints
     switch (workflow_type) {
       case 'document_search':
-        result = await executeDocumentSearch(parameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
+        result = await executeDocumentSearch(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
         break;
       case 'web_search':
-        result = await executeWebSearch(parameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
+        result = await executeWebSearch(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
         break;
       case 'chat_completion':
-        result = await executeChatCompletion(parameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
+        result = await executeChatCompletion(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
         break;
       case 'multi_step_workflow':
-        result = await executeMultiStepWorkflow(parameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
+        result = await executeMultiStepWorkflow(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
         break;
       default:
         return NextResponse.json({ error: 'Unknown workflow type' }, { status: 400 });
