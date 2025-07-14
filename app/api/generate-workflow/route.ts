@@ -45,6 +45,8 @@ The tool config should include:
 Generate both the executable code and the Paradigm tool configuration in valid JSON format.`;
 
   try {
+    console.log('Calling OpenAI API with key:', apiKey.substring(0, 10) + '...');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -68,18 +70,28 @@ Generate both the executable code and the Paradigm tool configuration in valid J
       })
     });
 
+    console.log('OpenAI response status:', response.status);
+    
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('OpenAI API error:', errorData);
-      return NextResponse.json({ error: 'Failed to generate workflow' }, { status: 500 });
+      console.error('OpenAI API error details:', errorData);
+      
+      // Return more specific error information
+      return NextResponse.json({ 
+        error: `OpenAI API error: ${errorData.error?.message || errorData.error?.type || 'Unknown error'}`,
+        details: errorData,
+        status: response.status
+      }, { status: 500 });
     }
 
     const data = await response.json();
     const generatedContent = data.choices[0]?.message?.content;
 
     if (!generatedContent) {
-      return NextResponse.json({ error: 'No content generated' }, { status: 500 });
+      return NextResponse.json({ error: 'No content generated from OpenAI' }, { status: 500 });
     }
+
+    console.log('Generated content length:', generatedContent.length);
 
     // Try to parse the response as JSON
     try {
@@ -89,6 +101,7 @@ Generate both the executable code and the Paradigm tool configuration in valid J
         tool_config: parsedResponse.tool_config
       });
     } catch (parseError) {
+      console.log('Failed to parse as JSON, returning raw content');
       // If parsing fails, return the raw content
       return NextResponse.json({
         raw_response: generatedContent,
@@ -98,6 +111,9 @@ Generate both the executable code and the Paradigm tool configuration in valid J
 
   } catch (error) {
     console.error('Error calling OpenAI:', error);
-    return NextResponse.json({ error: 'Failed to generate workflow' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to call OpenAI API',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 
