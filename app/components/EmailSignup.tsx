@@ -6,23 +6,16 @@ import { Mail, Send, CheckCircle } from 'lucide-react'
 
 export default function EmailSignup() {
   const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!email || !email.includes('@')) {
-      setError('Please enter a valid email address')
-      return
-    }
-
-    setIsLoading(true)
+    setIsSubmitting(true)
     setError('')
 
     try {
-      // This will be replaced with actual Firebase call
       const response = await fetch('/api/subscribe', {
         method: 'POST',
         headers: {
@@ -41,27 +34,23 @@ export default function EmailSignup() {
     } catch (err) {
       setError('Network error. Please check your connection and try again.')
     } finally {
-      setIsLoading(false)
+      setIsSubmitting(false)
     }
   }
 
   if (isSubmitted) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="glass-effect rounded-xl p-8 max-w-md mx-auto"
+        className="bg-white/5 rounded-xl p-8 border border-white/10 max-w-md mx-auto"
       >
         <div className="flex items-center justify-center mb-4">
-          <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-8 h-8 text-white" />
-          </div>
+          <CheckCircle className="h-12 w-12 text-green-400" />
         </div>
-        <h3 className="text-2xl font-bold text-white text-center mb-2">
-          You're on the list!
-        </h3>
+        <h3 className="text-xl font-semibold text-center mb-2">Thank you!</h3>
         <p className="text-white/70 text-center">
-          We'll notify you as soon as Scaffold.ai is ready. Get ready to transform your workflows!
+          You've been added to our waitlist. We'll notify you when we launch.
         </p>
       </motion.div>
     )
@@ -70,64 +59,56 @@ export default function EmailSignup() {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass-effect rounded-xl p-8 max-w-md mx-auto"
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8 }}
+      viewport={{ once: true }}
+      className="max-w-md mx-auto"
     >
-      <div className="flex items-center justify-center mb-6">
-        <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-          <Mail className="w-6 h-6 text-white" />
-        </div>
-      </div>
-      
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-white font-medium mb-2">
-            Email Address
-          </label>
-          <div className="relative">
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email address"
-              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-              disabled={isLoading}
-            />
-          </div>
-          {error && (
-            <motion.p
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-red-400 text-sm mt-2"
-            >
-              {error}
-            </motion.p>
-          )}
+        <div className="relative">
+          <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white/50" />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email address"
+            required
+            className="w-full bg-white/5 border border-white/20 rounded-lg py-4 pl-12 pr-4 text-white placeholder-white/50 focus:outline-none focus:border-white/40 focus:bg-white/10 transition-all duration-200"
+          />
         </div>
+        
+        {error && (
+          <motion.p
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-red-400 text-sm text-center"
+          >
+            {error}
+          </motion.p>
+        )}
         
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isSubmitting}
           className="w-full btn-primary flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? (
+          {isSubmitting ? (
             <>
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              <span>Subscribing...</span>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+              <span>Joining...</span>
             </>
           ) : (
             <>
-              <Send className="w-5 h-5" />
               <span>Join Waitlist</span>
+              <Send className="h-5 w-5" />
             </>
           )}
         </button>
+        
+        <p className="text-xs text-white/50 text-center">
+          No spam, ever. Unsubscribe at any time.
+        </p>
       </form>
-      
-      <p className="text-white/50 text-sm text-center mt-4">
-        No spam, ever. Unsubscribe at any time.
-      </p>
     </motion.div>
   )
 } 
