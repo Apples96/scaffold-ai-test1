@@ -14,6 +14,20 @@ export default function WorkflowGenerator() {
   const [error, setError] = useState("");
   const [copiedExecutable, setCopiedExecutable] = useState(false);
   const [copiedConfig, setCopiedConfig] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState("");
+  const [chatResponse, setChatResponse] = useState<string | null>(null);
+
+  // Example workflow config for demo
+  const DEMO_WORKFLOW_TYPE = "multi_step_workflow";
+  const DEMO_PARAMETERS = {
+    steps: [
+      { type: "docsearch", query: "AI workflow automation" },
+      { type: "websearch", query: "AI workflow automation" }
+    ],
+    question: chatInput
+  };
 
   const handleGenerate = async () => {
     if (!input.trim()) {
@@ -75,6 +89,38 @@ export default function WorkflowGenerator() {
       console.error("Failed to copy:", err);
     }
   };
+
+  const handleChatSend = async () => {
+    setChatError("");
+    setChatResponse(null);
+    if (!chatInput.trim()) {
+      setChatError("Please enter a question to test the workflow.");
+      return;
+    }
+    setChatLoading(true);
+    try {
+      const response = await fetch("https://scaffold-ai-test1.vercel.app/api/execute-workflow", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // No Authorization header for demo; add if needed
+        },
+        body: JSON.stringify({
+          workflow_type: DEMO_WORKFLOW_TYPE,
+          parameters: JSON.stringify({ ...DEMO_PARAMETERS, question: chatInput })
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to execute workflow");
+      }
+      setChatResponse(JSON.stringify(data, null, 2));
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setChatLoading(false);
+    }
+  }
 
   return (
     <section className="section-padding bg-gray-900/50">
@@ -205,6 +251,54 @@ export default function WorkflowGenerator() {
               </div>
             </div>
           )}
+        </div>
+        {/* Chat Demo Section */}
+        <div className="max-w-4xl mx-auto mt-16">
+          <div className="bg-gray-800/60 border border-blue-500/30 rounded-lg p-6 shadow-lg">
+            <h3 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-blue-400" />
+              Demo: Test Your Workflow
+            </h3>
+            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the generated workflow using the live API endpoint. This demo uses a sample multi-step workflow (docsearch + websearch).</p>
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                placeholder="Ask a question to test the workflow..."
+                className="flex-1 px-4 py-2 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onKeyDown={e => { if (e.key === 'Enter') handleChatSend(); }}
+                disabled={chatLoading}
+              />
+              <button
+                onClick={handleChatSend}
+                disabled={chatLoading}
+                className="btn-primary px-6 py-2 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {chatLoading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <Sparkles className="h-5 w-5" />
+                )}
+                Test Workflow
+              </button>
+            </div>
+            {chatError && (
+              <div className="mb-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-red-400 text-sm">{chatError}</p>
+              </div>
+            )}
+            {chatResponse && (
+              <div className="mt-4">
+                <label className="block text-white/80 mb-1 text-sm">API Response:</label>
+                <textarea
+                  value={chatResponse}
+                  readOnly
+                  className="w-full h-40 px-4 py-3 bg-gray-900 border border-white/10 rounded-lg text-white font-mono text-xs resize-none"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>
