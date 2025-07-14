@@ -25,9 +25,11 @@ Available Paradigm API endpoints (from https://paradigm.lighton.ai/api/schema/sw
 - Chat Completions: POST /chat/completions
 - And other endpoints available in the Swagger documentation
 
-Your response should be a JSON object with two fields:
+IMPORTANT: Return ONLY a valid JSON object with these two fields:
 1. "executable_code": JavaScript/TypeScript code that calls the execute-workflow API
 2. "tool_config": JSON configuration for Paradigm third-party tool
+
+Do NOT include any markdown formatting, code blocks, or explanatory text. Return ONLY the JSON object.
 
 The executable code should:
 - Parse the workflow description into appropriate API calls
@@ -42,7 +44,18 @@ The tool config should include:
 - headers: Authorization header for API key
 - body_params: Parameters needed for the workflow
 
-Generate both the executable code and the Paradigm tool configuration in valid JSON format.`;
+Example response format:
+{
+  "executable_code": "// JavaScript code here",
+  "tool_config": {
+    "name": "Tool Name",
+    "description": "Tool description",
+    "http_method": "POST",
+    "url": "https://scaffold-ai-test1.vercel.app/api/execute-workflow",
+    "headers": {"Authorization": "Bearer YOUR_API_KEY"},
+    "body_params": {"param": "value"}
+  }
+}`;
 
   try {
     console.log('Calling OpenAI API with key:', apiKey.substring(0, 10) + '...');
@@ -58,7 +71,7 @@ Generate both the executable code and the Paradigm tool configuration in valid J
         messages: [
           {
             role: 'system',
-            content: 'You are an expert in workflow automation and API integration. Generate both executable code and tool configurations in valid JSON format.'
+            content: 'You are an expert in workflow automation and API integration. Return ONLY valid JSON without any markdown formatting or explanatory text.'
           },
           {
             role: 'user',
@@ -93,9 +106,18 @@ Generate both the executable code and the Paradigm tool configuration in valid J
 
     console.log('Generated content length:', generatedContent.length);
 
-    // Try to parse the response as JSON
+    // Try to parse the response as JSON, handling markdown wrapping
     try {
-      const parsedResponse = JSON.parse(generatedContent);
+      let jsonContent = generatedContent.trim();
+      
+      // Remove markdown code blocks if present
+      if (jsonContent.startsWith('```json')) {
+        jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonContent.startsWith('```')) {
+        jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const parsedResponse = JSON.parse(jsonContent);
       return NextResponse.json({
         executable_code: parsedResponse.executable_code,
         tool_config: parsedResponse.tool_config
