@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { ArrowRight, Zap, Shield, Clock, BarChart3, Users, CheckCircle, ChevronRight } from 'lucide-react'
 import EmailSignup from './components/EmailSignup'
+import WorkflowGenerator from './components/WorkflowGenerator'
 
 export default function Home() {
   return (
@@ -51,6 +52,8 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+
+      <WorkflowGenerator />
 
       {/* Process Flow */}
       <section className="section-padding bg-white/5">
