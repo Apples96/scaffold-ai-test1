@@ -72,6 +72,11 @@ export async function POST(req: NextRequest) {
 }
 
 async function executeDocumentSearch(parameters: any, apiKey: string, baseUrl: string) {
+  // Validate required parameters
+  if (!parameters.query) {
+    throw new Error('Query parameter is required for document search');
+  }
+
   const response = await fetch(`${baseUrl}/chat/document-search`, {
     method: 'POST',
     headers: {
@@ -80,7 +85,7 @@ async function executeDocumentSearch(parameters: any, apiKey: string, baseUrl: s
     },
     body: JSON.stringify({
       query: parameters.query,
-      model: parameters.model,
+      model: parameters.model || 'alfred-4.2',
       workspace_ids: parameters.workspace_ids,
       file_ids: parameters.file_ids,
       chat_session_id: parameters.chat_session_id,
@@ -92,13 +97,23 @@ async function executeDocumentSearch(parameters: any, apiKey: string, baseUrl: s
   });
 
   if (!response.ok) {
-    throw new Error(`Document search failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Document search failed: ${response.statusText} - ${errorData.error || ''}`);
   }
 
   return await response.json();
 }
 
 async function executeDocumentAnalysis(parameters: any, apiKey: string, baseUrl: string) {
+  // Validate required parameters
+  if (!parameters.query) {
+    throw new Error('Query parameter is required for document analysis');
+  }
+  if (!parameters.document_ids || !Array.isArray(parameters.document_ids) || parameters.document_ids.length === 0) {
+    throw new Error('Document IDs array is required for document analysis');
+  }
+
+  // Start the analysis
   const response = await fetch(`${baseUrl}/chat/document-analysis`, {
     method: 'POST',
     headers: {
@@ -108,19 +123,66 @@ async function executeDocumentAnalysis(parameters: any, apiKey: string, baseUrl:
     body: JSON.stringify({
       query: parameters.query,
       document_ids: parameters.document_ids,
-      model: parameters.model,
+      model: parameters.model || 'alfred-4.2',
       private: parameters.private
     })
   });
 
   if (!response.ok) {
-    throw new Error(`Document analysis failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Document analysis failed: ${response.statusText} - ${errorData.error || ''}`);
   }
 
-  return await response.json();
+  const result = await response.json();
+  
+  // If we got a chat_response_id, poll for completion
+  if (result.chat_response_id) {
+    return await pollDocumentAnalysis(result.chat_response_id, apiKey, baseUrl);
+  }
+  
+  return result;
+}
+
+async function pollDocumentAnalysis(chatResponseId: number, apiKey: string, baseUrl: string, maxAttempts: number = 30) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const response = await fetch(`${baseUrl}/chat/document-analysis/${chatResponseId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to poll document analysis: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.status === 'completed') {
+      return result;
+    } else if (result.status === 'failed') {
+      throw new Error('Document analysis failed');
+    }
+    
+    // Wait 2 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  throw new Error('Document analysis timed out');
 }
 
 async function executeImageAnalysis(parameters: any, apiKey: string, baseUrl: string) {
+  // Validate required parameters
+  if (!parameters.query) {
+    throw new Error('Query parameter is required for image analysis');
+  }
+  if (!parameters.document_ids || !Array.isArray(parameters.document_ids) || parameters.document_ids.length === 0) {
+    throw new Error('Document IDs array is required for image analysis');
+  }
+  if (parameters.document_ids.length > 5) {
+    throw new Error('Maximum 5 documents allowed for image analysis');
+  }
+
   const response = await fetch(`${baseUrl}/chat/image-analysis`, {
     method: 'POST',
     headers: {
@@ -130,19 +192,25 @@ async function executeImageAnalysis(parameters: any, apiKey: string, baseUrl: st
     body: JSON.stringify({
       query: parameters.query,
       document_ids: parameters.document_ids,
-      model: parameters.model,
+      model: parameters.model || 'alfred-4.2',
       private: parameters.private
     })
   });
 
   if (!response.ok) {
-    throw new Error(`Image analysis failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Image analysis failed: ${response.statusText} - ${errorData.error || ''}`);
   }
 
   return await response.json();
 }
 
 async function executeQuery(parameters: any, apiKey: string, baseUrl: string) {
+  // Validate required parameters
+  if (!parameters.query) {
+    throw new Error('Query parameter is required for query');
+  }
+
   const response = await fetch(`${baseUrl}/query`, {
     method: 'POST',
     headers: {
@@ -157,13 +225,19 @@ async function executeQuery(parameters: any, apiKey: string, baseUrl: string) {
   });
 
   if (!response.ok) {
-    throw new Error(`Query failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Query failed: ${response.statusText} - ${errorData.error || ''}`);
   }
 
   return await response.json();
 }
 
 async function executeChatCompletion(parameters: any, apiKey: string, baseUrl: string) {
+  // Validate required parameters
+  if (!parameters.messages || !Array.isArray(parameters.messages) || parameters.messages.length === 0) {
+    throw new Error('Messages array is required for chat completion');
+  }
+
   const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -179,7 +253,8 @@ async function executeChatCompletion(parameters: any, apiKey: string, baseUrl: s
   });
 
   if (!response.ok) {
-    throw new Error(`Chat completion failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Chat completion failed: ${response.statusText} - ${errorData.error || ''}`);
   }
 
   return await response.json();
