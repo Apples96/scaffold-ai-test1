@@ -272,6 +272,7 @@ async function executeMultiStepWorkflow(parameters: any, apiKey: string, baseUrl
     try {
       switch (step.type) {
         case 'document_search':
+        case 'docsearch':
           stepResult = await executeDocumentSearch({
             query: step.query,
             model: step.model,
@@ -286,6 +287,7 @@ async function executeMultiStepWorkflow(parameters: any, apiKey: string, baseUrl
           break;
           
         case 'document_analysis':
+        case 'docanalysis':
           stepResult = await executeDocumentAnalysis({
             query: step.query,
             document_ids: step.document_ids,
@@ -295,6 +297,7 @@ async function executeMultiStepWorkflow(parameters: any, apiKey: string, baseUrl
           break;
           
         case 'image_analysis':
+        case 'imageanalysis':
           stepResult = await executeImageAnalysis({
             query: step.query,
             document_ids: step.document_ids,
@@ -304,6 +307,7 @@ async function executeMultiStepWorkflow(parameters: any, apiKey: string, baseUrl
           break;
           
         case 'query':
+        case 'search':
           stepResult = await executeQuery({
             query: step.query,
             collection: step.collection,
@@ -324,6 +328,7 @@ async function executeMultiStepWorkflow(parameters: any, apiKey: string, baseUrl
           
         case 'chat':
         case 'chat_completion':
+        case 'completion':
           stepResult = await executeChatCompletion({
             model: step.model,
             messages: step.messages,

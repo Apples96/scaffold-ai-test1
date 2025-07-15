@@ -27,6 +27,13 @@ Available Paradigm API endpoints (from official documentation):
 - Query: POST /api/v2/query (retrieve document chunks based on query)
 - Files: GET/POST /api/v2/files (manage uploaded files)
 
+IMPORTANT: Use these exact step type names in your workflow:
+- "document_search" (or "docsearch") for document search
+- "document_analysis" (or "docanalysis") for document analysis  
+- "image_analysis" (or "imageanalysis") for image analysis
+- "query" (or "search") for document chunk retrieval
+- "chat_completion" (or "chat" or "completion") for chat completions
+
 Note: Web search is NOT available via the Paradigm API. If the user requests web search, do NOT include those steps in the workflow. Instead, add an explanation in the final answer to the user stating that web search is not available via the Paradigm API.
 
 The executable code should:
@@ -49,7 +56,7 @@ The tool config should include:
 
 Example response format:
 {
-  "executable_code": "async function executeWorkflow(question) { const response = await fetch('https://scaffold-ai-test1.vercel.app/api/execute-workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workflow_type: 'multi_step_workflow', parameters: JSON.stringify({ steps: [...] }) }) }); return response.json(); }",
+  "executable_code": "async function executeWorkflow(question) { const response = await fetch('https://scaffold-ai-test1.vercel.app/api/execute-workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workflow_type: 'multi_step_workflow', parameters: JSON.stringify({ steps: [{ type: 'document_search', query: 'What is AI workflow automation?', model: 'alfred-4.2' }] }) }) }); return response.json(); }",
   "tool_config": {
     "name": "Scaffold AI Workflow Executor",
     "description": "Executes AI workflows by calling the Scaffold.ai API endpoint which handles Paradigm API integration. Supports chat completion, document search, document analysis, image analysis, and query operations. Web search is not available.",
