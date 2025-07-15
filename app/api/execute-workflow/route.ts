@@ -77,23 +77,29 @@ async function executeDocumentSearch(parameters: any, apiKey: string, baseUrl: s
     throw new Error('Query parameter is required for document search');
   }
 
+  const requestBody = {
+    query: parameters.query,
+    model: parameters.model || 'alfred-4.2',
+    workspace_ids: parameters.workspace_ids,
+    file_ids: parameters.file_ids,
+    chat_session_id: parameters.chat_session_id,
+    company_scope: parameters.company_scope,
+    private_scope: parameters.private_scope,
+    tool: parameters.tool || 'DocumentSearch',
+    private: parameters.private,
+    // Add explicit instructions to focus on the specific query
+    user_instructions: `Please answer the following question specifically and directly: ${parameters.query}. Do not provide general information unless it directly relates to the question asked.`
+  };
+
+  console.log('Document search request:', JSON.stringify(requestBody, null, 2));
+
   const response = await fetch(`${baseUrl}/chat/document-search`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      query: parameters.query,
-      model: parameters.model || 'alfred-4.2',
-      workspace_ids: parameters.workspace_ids,
-      file_ids: parameters.file_ids,
-      chat_session_id: parameters.chat_session_id,
-      company_scope: parameters.company_scope,
-      private_scope: parameters.private_scope,
-      tool: parameters.tool || 'DocumentSearch',
-      private: parameters.private
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
@@ -101,7 +107,9 @@ async function executeDocumentSearch(parameters: any, apiKey: string, baseUrl: s
     throw new Error(`Document search failed: ${response.statusText} - ${errorData.error || ''}`);
   }
 
-  return await response.json();
+  const result = await response.json();
+  console.log('Document search response:', JSON.stringify(result, null, 2));
+  return result;
 }
 
 async function executeDocumentAnalysis(parameters: any, apiKey: string, baseUrl: string) {
