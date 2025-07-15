@@ -21,13 +21,12 @@ export default function WorkflowGenerator() {
 
   // Example workflow config for demo
   const DEMO_WORKFLOW_TYPE = "multi_step_workflow";
-  const DEMO_PARAMETERS = {
+  const getDemoParameters = (userQuestion: string) => ({
     steps: [
-      { type: "docsearch", query: "AI workflow automation" },
-      { type: "websearch", query: "AI workflow automation" }
-    ],
-    question: chatInput
-  };
+      { type: "docsearch", query: userQuestion },
+      { type: "websearch", query: userQuestion }
+    ]
+  });
 
   const handleGenerate = async () => {
     if (!input.trim()) {
@@ -99,6 +98,7 @@ export default function WorkflowGenerator() {
     }
     setChatLoading(true);
     try {
+      const demoParameters = getDemoParameters(chatInput);
       const response = await fetch("https://scaffold-ai-test1.vercel.app/api/execute-workflow", {
         method: "POST",
         headers: {
@@ -107,7 +107,7 @@ export default function WorkflowGenerator() {
         },
         body: JSON.stringify({
           workflow_type: DEMO_WORKFLOW_TYPE,
-          parameters: JSON.stringify({ ...DEMO_PARAMETERS, question: chatInput })
+          parameters: JSON.stringify(demoParameters)
         })
       });
       const data = await response.json();
