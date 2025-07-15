@@ -19,7 +19,15 @@ export async function POST(req: NextRequest) {
 
 Workflow Description: "${description}"
 
-IMPORTANT: The only available Paradigm API endpoint is chat completion (POST /v2/chat/completions) with model 'alfred-4.2'. Web search and document search are NOT available. If the user requests web search or document search, do NOT include those steps in the workflow. Instead, add an explanation in the final answer to the user stating that those steps are not available via the Paradigm API.
+Available Paradigm API endpoints (from official documentation):
+- Chat Completions: POST /api/v2/chat/completions (model: alfred-4.2)
+- Document Search: POST /api/v2/chat/document-search (search through documents with query)
+- Document Analysis: POST /api/v2/chat/document-analysis (analyze specific documents)
+- Image Analysis: POST /api/v2/chat/image-analysis (analyze images in documents)
+- Query: POST /api/v2/query (retrieve document chunks based on query)
+- Files: GET/POST /api/v2/files (manage uploaded files)
+
+Note: Web search is NOT available via the Paradigm API. If the user requests web search, do NOT include those steps in the workflow. Instead, add an explanation in the final answer to the user stating that web search is not available via the Paradigm API.
 
 The executable code should:
 - Call the Vercel API endpoint: https://scaffold-ai-test1.vercel.app/api/execute-workflow
@@ -27,8 +35,8 @@ The executable code should:
 - Stringify the parameters object before sending (Paradigm UI only supports string, not object, for body params)
 - Handle the response and return results
 - NOT call Paradigm APIs directly (the Vercel endpoint handles that)
-- Only use available endpoints (chat completion with model 'alfred-4.2')
-- If a step is unavailable, add an explanation to the user in the final result
+- Use available endpoints (chat completion, document search, document analysis, image analysis, query)
+- If a step is unavailable (like web search), add an explanation to the user in the final result
 
 The tool config should include:
 - name: Descriptive name for the tool
@@ -37,14 +45,14 @@ The tool config should include:
 - url: https://scaffold-ai-test1.vercel.app/api/execute-workflow
 - headers: Authorization header for API key
 - body_params: Parameters needed for the workflow (parameters must be type 'string' due to Paradigm UI limitation)
-- Only include available steps (chat completion)
+- Include available steps (chat completion, document search, document analysis, image analysis, query)
 
 Example response format:
 {
   "executable_code": "async function executeWorkflow(question) { const response = await fetch('https://scaffold-ai-test1.vercel.app/api/execute-workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workflow_type: 'multi_step_workflow', parameters: JSON.stringify({ steps: [...] }) }) }); return response.json(); }",
   "tool_config": {
     "name": "Scaffold AI Workflow Executor",
-    "description": "Executes AI workflows by calling the Scaffold.ai API endpoint which handles Paradigm API integration. Only chat completion is available. Web search and document search are not available.",
+    "description": "Executes AI workflows by calling the Scaffold.ai API endpoint which handles Paradigm API integration. Supports chat completion, document search, document analysis, image analysis, and query operations. Web search is not available.",
     "http_method": "POST",
     "url": "https://scaffold-ai-test1.vercel.app/api/execute-workflow",
     "headers": {"Authorization": "Bearer YOUR_API_KEY"},

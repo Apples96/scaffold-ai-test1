@@ -27,8 +27,16 @@ export async function POST(req: NextRequest) {
     // Execute different workflow types by calling appropriate Paradigm endpoints
     switch (workflow_type) {
       case 'document_search':
-        explanation = 'Document search is currently not available via the Paradigm API.';
-        result = null;
+        result = await executeDocumentSearch(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
+        break;
+      case 'document_analysis':
+        result = await executeDocumentAnalysis(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
+        break;
+      case 'image_analysis':
+        result = await executeImageAnalysis(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
+        break;
+      case 'query':
+        result = await executeQuery(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
         break;
       case 'web_search':
         explanation = 'Web search is not available via the Paradigm API.';
@@ -63,11 +71,97 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Document search is not available
-// async function executeDocumentSearch(parameters: any, apiKey: string, baseUrl: string) { ... }
+async function executeDocumentSearch(parameters: any, apiKey: string, baseUrl: string) {
+  const response = await fetch(`${baseUrl}/chat/document-search`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: parameters.query,
+      model: parameters.model,
+      workspace_ids: parameters.workspace_ids,
+      file_ids: parameters.file_ids,
+      chat_session_id: parameters.chat_session_id,
+      company_scope: parameters.company_scope,
+      private_scope: parameters.private_scope,
+      tool: parameters.tool || 'DocumentSearch',
+      private: parameters.private
+    })
+  });
 
-// Web search is not available
-// async function executeWebSearch(parameters: any, apiKey: string, baseUrl: string) { ... }
+  if (!response.ok) {
+    throw new Error(`Document search failed: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+async function executeDocumentAnalysis(parameters: any, apiKey: string, baseUrl: string) {
+  const response = await fetch(`${baseUrl}/chat/document-analysis`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: parameters.query,
+      document_ids: parameters.document_ids,
+      model: parameters.model,
+      private: parameters.private
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Document analysis failed: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+async function executeImageAnalysis(parameters: any, apiKey: string, baseUrl: string) {
+  const response = await fetch(`${baseUrl}/chat/image-analysis`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: parameters.query,
+      document_ids: parameters.document_ids,
+      model: parameters.model,
+      private: parameters.private
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Image analysis failed: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+async function executeQuery(parameters: any, apiKey: string, baseUrl: string) {
+  const response = await fetch(`${baseUrl}/query`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: parameters.query,
+      collection: parameters.collection || 'base_collection',
+      n: parameters.n || 5
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Query failed: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
 
 async function executeChatCompletion(parameters: any, apiKey: string, baseUrl: string) {
   const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -77,7 +171,7 @@ async function executeChatCompletion(parameters: any, apiKey: string, baseUrl: s
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'alfred-4.2',
+      model: parameters.model || 'alfred-4.2',
       messages: parameters.messages,
       temperature: parameters.temperature || 0.7,
       max_tokens: parameters.max_tokens || 1000
@@ -99,48 +193,99 @@ async function executeMultiStepWorkflow(parameters: any, apiKey: string, baseUrl
 
   for (const step of steps) {
     let stepResult;
-    if (step.type === 'websearch' || step.type === 'web_search') {
-      explanation += `Step '${step.name || step.type}': Web search is not available via the Paradigm API.\n`;
-      results.push({
-        step: step.name || step.type,
-        result: null,
-        explanation: 'Web search is not available via the Paradigm API.',
-        timestamp: new Date().toISOString()
-      });
-      continue;
-    }
-    if (step.type === 'docsearch' || step.type === 'document_search') {
-      explanation += `Step '${step.name || step.type}': Document search is not available via the Paradigm API.\n`;
-      results.push({
-        step: step.name || step.type,
-        result: null,
-        explanation: 'Document search is not available via the Paradigm API.',
-        timestamp: new Date().toISOString()
-      });
-      continue;
-    }
-    if (step.type === 'chat' || step.type === 'chat_completion') {
-      stepResult = await executeChatCompletion({
-        messages: step.messages,
-        temperature: step.temperature,
-        max_tokens: step.max_tokens
-      }, apiKey, baseUrl);
+    
+    try {
+      switch (step.type) {
+        case 'document_search':
+          stepResult = await executeDocumentSearch({
+            query: step.query,
+            model: step.model,
+            workspace_ids: step.workspace_ids,
+            file_ids: step.file_ids,
+            chat_session_id: step.chat_session_id,
+            company_scope: step.company_scope,
+            private_scope: step.private_scope,
+            tool: step.tool,
+            private: step.private
+          }, apiKey, baseUrl);
+          break;
+          
+        case 'document_analysis':
+          stepResult = await executeDocumentAnalysis({
+            query: step.query,
+            document_ids: step.document_ids,
+            model: step.model,
+            private: step.private
+          }, apiKey, baseUrl);
+          break;
+          
+        case 'image_analysis':
+          stepResult = await executeImageAnalysis({
+            query: step.query,
+            document_ids: step.document_ids,
+            model: step.model,
+            private: step.private
+          }, apiKey, baseUrl);
+          break;
+          
+        case 'query':
+          stepResult = await executeQuery({
+            query: step.query,
+            collection: step.collection,
+            n: step.n
+          }, apiKey, baseUrl);
+          break;
+          
+        case 'websearch':
+        case 'web_search':
+          explanation += `Step '${step.name || step.type}': Web search is not available via the Paradigm API.\n`;
+          results.push({
+            step: step.name || step.type,
+            result: null,
+            explanation: 'Web search is not available via the Paradigm API.',
+            timestamp: new Date().toISOString()
+          });
+          continue;
+          
+        case 'chat':
+        case 'chat_completion':
+          stepResult = await executeChatCompletion({
+            model: step.model,
+            messages: step.messages,
+            temperature: step.temperature,
+            max_tokens: step.max_tokens
+          }, apiKey, baseUrl);
+          break;
+          
+        default:
+          explanation += `Step '${step.name || step.type}': Unknown or unsupported step type.\n`;
+          results.push({
+            step: step.name || step.type,
+            result: null,
+            explanation: 'Unknown or unsupported step type.',
+            timestamp: new Date().toISOString()
+          });
+          continue;
+      }
+
       results.push({
         step: step.name || step.type,
         result: stepResult,
         timestamp: new Date().toISOString()
       });
+
+      // Update context for next steps
       currentContext[step.name || step.type] = stepResult;
-      continue;
+      
+    } catch (error) {
+      explanation += `Step '${step.name || step.type}': Failed with error: ${error instanceof Error ? error.message : 'Unknown error'}\n`;
+      results.push({
+        step: step.name || step.type,
+        result: null,
+        explanation: `Failed with error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: new Date().toISOString()
+      });
     }
-    // Unknown step type
-    explanation += `Step '${step.name || step.type}': Unknown or unsupported step type.\n`;
-    results.push({
-      step: step.name || step.type,
-      result: null,
-      explanation: 'Unknown or unsupported step type.',
-      timestamp: new Date().toISOString()
-    });
   }
 
   return {
