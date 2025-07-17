@@ -6,6 +6,16 @@ import EmailSignup from './components/EmailSignup'
 import WorkflowGenerator from './components/WorkflowGenerator'
 
 export default function Home() {
+  const scrollToWorkflowGenerator = () => {
+    const element = document.getElementById('workflow-generator');
+    if (element) {
+      element.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Navigation */}
@@ -41,11 +51,17 @@ export default function Home() {
               Describe your step-by-step workflow and let our AI build the scaffolding for reliable, automated execution.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-              <button className="btn-primary text-base px-7 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 shadow-none hover:shadow-md transition-all group">
+              <button 
+                onClick={scrollToWorkflowGenerator}
+                className="btn-primary text-base px-7 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 shadow-none hover:shadow-md transition-all group"
+              >
                 <span>Get Started Free</span>
                 <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </button>
-              <button className="btn-secondary text-base px-7 py-3 rounded-lg font-semibold flex items-center gap-2 border border-white/20 hover:border-white/40 transition-all">
+              <button 
+                onClick={scrollToWorkflowGenerator}
+                className="btn-secondary text-base px-7 py-3 rounded-lg font-semibold flex items-center gap-2 border border-white/20 hover:border-white/40 transition-all"
+              >
                 Watch Demo
               </button>
             </div>
@@ -53,7 +69,9 @@ export default function Home() {
         </div>
       </section>
 
-      <WorkflowGenerator />
+      <section id="workflow-generator">
+        <WorkflowGenerator />
+      </section>
 
       {/* Process Flow */}
       <section className="section-padding bg-white/5">
