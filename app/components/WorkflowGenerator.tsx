@@ -21,10 +21,9 @@ export default function WorkflowGenerator() {
   const [chatResponse, setChatResponse] = useState<string | null>(null);
 
   // Example workflow config for demo
-  const DEMO_WORKFLOW_TYPE = "document_search";
+  const DEMO_WORKFLOW_TYPE = "multi_sentence_workflow";
   const getDemoParameters = (userQuestion: string) => ({
-    query: userQuestion,
-    model: "alfred-4.2"
+    user_input: userQuestion
   });
 
   const handleGenerate = async () => {
@@ -120,7 +119,11 @@ export default function WorkflowGenerator() {
       
       let finalResponse = "";
       if (data.result) {
-        if (data.workflow_type === 'multi_step_workflow' && data.result.workflow_results) {
+        if (data.workflow_type === 'multi_sentence_workflow' && data.result.final_answer) {
+          // Use the final formatted answer from multi-sentence workflow
+          finalResponse = data.result.final_answer;
+          console.log('Using multi-sentence final answer:', finalResponse);
+        } else if (data.workflow_type === 'multi_step_workflow' && data.result.workflow_results) {
           console.log('Processing multi-step workflow results:', data.result.workflow_results);
           // Find the last step with a result that has content/answer/response
           const lastStep = [...data.result.workflow_results].reverse().find((step: any) => {
@@ -298,7 +301,7 @@ export default function WorkflowGenerator() {
               <Sparkles className="h-5 w-5 text-blue-400" />
               Demo: Test Your Workflow
             </h3>
-            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the generated workflow using the live API endpoint. This demo uses a sample document search workflow.</p>
+            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the generated workflow using the live API endpoint. This demo uses a multi-sentence document search workflow that splits your input into individual questions.</p>
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <input
                 type="text"

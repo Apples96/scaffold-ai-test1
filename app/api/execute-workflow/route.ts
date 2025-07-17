@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { executeMultiSentenceWorkflow } from '../../utils/multiSentenceWorkflow';
 
 export async function POST(req: NextRequest) {
   try {
@@ -101,6 +102,11 @@ export async function POST(req: NextRequest) {
         break;
       case 'chat_completion':
         result = await executeChatCompletion(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);
+        break;
+      case 'multi_sentence_workflow':
+        const multiSentence = await executeMultiSentenceWorkflow(parsedParameters.user_input, PARADIGM_API_KEY, PARADIGM_BASE_URL);
+        result = multiSentence.result;
+        explanation = multiSentence.explanation;
         break;
       case 'multi_step_workflow':
         const multiStep = await executeMultiStepWorkflow(parsedParameters, PARADIGM_API_KEY, PARADIGM_BASE_URL);

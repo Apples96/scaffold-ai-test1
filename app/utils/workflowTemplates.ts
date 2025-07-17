@@ -15,6 +15,65 @@ export interface WorkflowTemplate {
 
 export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
+    id: 'multi_sentence_document_search',
+    name: 'Multi-Sentence Document Search',
+    description: 'Split user input into sentences and search documents for each sentence separately',
+    pattern: 'for every new sentence launch a new search in the documents',
+    template: {
+      workflow_type: 'multi_step_workflow',
+      parameters: {
+        steps: [
+          {
+            type: 'document_search',
+            query: '{sentence_1}',
+            model: 'alfred-4.2',
+            name: 'sentence_1_search'
+          },
+          {
+            type: 'document_search', 
+            query: '{sentence_2}',
+            model: 'alfred-4.2',
+            name: 'sentence_2_search'
+          },
+          {
+            type: 'document_search',
+            query: '{sentence_3}',
+            model: 'alfred-4.2', 
+            name: 'sentence_3_search'
+          },
+          {
+            type: 'chat_completion',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a helpful assistant that formats search results. For each question and its corresponding answer, format the response as "question: [original question] answer: [search result]". Combine all the search results into a comprehensive final answer.'
+              },
+              {
+                role: 'user',
+                content: 'Format the following search results:\n\n{sentence_1}: {sentence_1_result}\n{sentence_2}: {sentence_2_result}\n{sentence_3}: {sentence_3_result}'
+              }
+            ],
+            model: 'alfred-4.2',
+            name: 'format_final_answer'
+          }
+        ]
+      }
+    },
+    requiredParams: ['user_input'],
+    optionalParams: ['model'],
+    validation: (params) => {
+      const errors = [];
+      if (!params.user_input) errors.push('User input is required');
+      return { valid: errors.length === 0, errors };
+    },
+    examples: [
+      'input: user asks questions in their prompt workflow: for every new sentence launch a new search in the documents output: final answer should use all doc search answers',
+      'split user input into sentences and search documents for each sentence separately',
+      'for every new sentence (ie at the end of a full stop, exclamation mark or question mark), launch a new search in the documents'
+    ]
+  },
+  
+  {
     id: 'document_search',
     name: 'Document Search',
     description: 'Search through documents with a query',
@@ -234,6 +293,13 @@ export function extractParameters(
   // Extract user message for chat completion
   if (template.requiredParams.includes('user_message')) {
     params.user_message = userDescription;
+  }
+  
+  // Extract user input for multi-sentence workflows
+  if (template.requiredParams.includes('user_input')) {
+    // For multi-sentence workflows, we need the actual user input
+    // This will be provided separately when the workflow is executed
+    params.user_input = userDescription;
   }
   
   return params;
