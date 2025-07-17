@@ -114,7 +114,38 @@ export default function WorkflowGenerator() {
       if (!response.ok) {
         throw new Error(data.error || "Failed to execute workflow");
       }
-      setChatResponse(JSON.stringify(data, null, 2));
+      
+      // Extract the final response content instead of showing the full JSON
+      let finalResponse = "";
+      
+      if (data.result) {
+        if (data.workflow_type === 'multi_step_workflow' && data.result.workflow_results) {
+          // For multi-step workflows, extract the content from each step
+          const stepResponses = data.result.workflow_results
+            .filter((step: any) => step.result && step.result.content)
+            .map((step: any) => {
+              const content = step.result.content;
+              return `[${step.step}]: ${content}`;
+            });
+          finalResponse = stepResponses.join('\n\n');
+        } else if (data.result.content) {
+          // For single-step workflows, extract the content directly
+          finalResponse = data.result.content;
+        } else if (data.result.answer) {
+          // Alternative content field
+          finalResponse = data.result.answer;
+        } else if (data.result.response) {
+          // Another alternative content field
+          finalResponse = data.result.response;
+        } else {
+          // Fallback: show a summary of what was executed
+          finalResponse = `Workflow executed successfully. ${data.explanation || 'Check the API response for detailed results.'}`;
+        }
+      } else {
+        finalResponse = "No response content available.";
+      }
+      
+      setChatResponse(finalResponse);
     } catch (err) {
       setChatError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -290,11 +321,11 @@ export default function WorkflowGenerator() {
             )}
             {chatResponse && (
               <div className="mt-4">
-                <label className="block text-white/80 mb-1 text-sm">API Response:</label>
+                <label className="block text-white/80 mb-1 text-sm">Workflow Response:</label>
                 <textarea
                   value={chatResponse}
                   readOnly
-                  className="w-full h-40 px-4 py-3 bg-gray-900 border border-white/10 rounded-lg text-white font-mono text-xs resize-none"
+                  className="w-full h-40 px-4 py-3 bg-gray-900 border border-white/10 rounded-lg text-white text-sm resize-none"
                 />
               </div>
             )}
