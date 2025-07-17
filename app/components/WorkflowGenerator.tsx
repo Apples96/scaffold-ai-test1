@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Copy, Check, Sparkles, Code, Settings } from "lucide-react";
 import { motion } from "framer-motion";
+import ReactMarkdown from 'react-markdown';
 
 const PLACEHOLDER = `Describe the input (user action and any provided data, such as prompts or documents). Specify the expected output (AI system response, including any artifacts like reports or actions in external tools). Clearly outline each intermediate step, detailing the inputs, outputs, and any additional tools, documents, or data sources involved.`;
 
@@ -103,7 +104,6 @@ export default function WorkflowGenerator() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // No Authorization header for demo; add if needed
         },
         body: JSON.stringify({
           workflow_type: DEMO_WORKFLOW_TYPE,
@@ -114,37 +114,25 @@ export default function WorkflowGenerator() {
       if (!response.ok) {
         throw new Error(data.error || "Failed to execute workflow");
       }
-      
-      // Extract the final response content instead of showing the full JSON
       let finalResponse = "";
-      
       if (data.result) {
         if (data.workflow_type === 'multi_step_workflow' && data.result.workflow_results) {
-          // For multi-step workflows, extract the content from each step
-          const stepResponses = data.result.workflow_results
-            .filter((step: any) => step.result && step.result.content)
-            .map((step: any) => {
-              const content = step.result.content;
-              return `[${step.step}]: ${content}`;
-            });
-          finalResponse = stepResponses.join('\n\n');
+          // Find the last step with a result that has content/answer/response
+          const lastStep = [...data.result.workflow_results].reverse().find((step: any) => step.result && (step.result.content || step.result.answer || step.result.response));
+          if (lastStep && lastStep.result) {
+            finalResponse = lastStep.result.content || lastStep.result.answer || lastStep.result.response || '';
+          }
         } else if (data.result.content) {
-          // For single-step workflows, extract the content directly
           finalResponse = data.result.content;
         } else if (data.result.answer) {
-          // Alternative content field
           finalResponse = data.result.answer;
         } else if (data.result.response) {
-          // Another alternative content field
           finalResponse = data.result.response;
-        } else {
-          // Fallback: show a summary of what was executed
-          finalResponse = `Workflow executed successfully. ${data.explanation || 'Check the API response for detailed results.'}`;
         }
-      } else {
-        finalResponse = "No response content available.";
       }
-      
+      if (!finalResponse) {
+        finalResponse = "Workflow executed successfully, but no answer was returned.";
+      }
       setChatResponse(finalResponse);
     } catch (err) {
       setChatError(err instanceof Error ? err.message : "An error occurred");
@@ -290,7 +278,7 @@ export default function WorkflowGenerator() {
               <Sparkles className="h-5 w-5 text-blue-400" />
               Demo: Test Your Workflow
             </h3>
-            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the generated workflow using the live API endpoint. This demo uses a sample multi-step workflow (docsearch + websearch).</p>
+            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the generated workflow using the live API endpoint. This demo uses a sample multi-step workflow.</p>
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <input
                 type="text"
@@ -322,11 +310,9 @@ export default function WorkflowGenerator() {
             {chatResponse && (
               <div className="mt-4">
                 <label className="block text-white/80 mb-1 text-sm">Workflow Response:</label>
-                <textarea
-                  value={chatResponse}
-                  readOnly
-                  className="w-full h-40 px-4 py-3 bg-gray-900 border border-white/10 rounded-lg text-white text-sm resize-none"
-                />
+                <div className="w-full min-h-24 max-h-80 overflow-auto px-4 py-3 bg-gray-900 border border-white/10 rounded-lg text-white text-sm prose prose-invert">
+                  <ReactMarkdown>{chatResponse}</ReactMarkdown>
+                </div>
               </div>
             )}
           </div>
