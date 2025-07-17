@@ -17,10 +17,10 @@ export async function POST(req: NextRequest) {
     const PARADIGM_API_KEY = process.env.PARADIGM_API_KEY;
     const PARADIGM_BASE_URL = 'https://paradigm.lighton.ai/api/v2';
     
-    // Check if this is a demo request (no API key needed)
-    const isDemoRequest = !PARADIGM_API_KEY;
-    
-    if (isDemoRequest) {
+    // Only use demo mode if no API key is configured
+    if (!PARADIGM_API_KEY) {
+      console.log('No Paradigm API key found, using demo mode');
+      
       // Return demo responses for different workflow types
       if (workflow_type === 'document_search') {
         const demoResponse = {
@@ -74,9 +74,9 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    if (!PARADIGM_API_KEY) {
-      return NextResponse.json({ error: 'Paradigm API key not configured' }, { status: 500 });
-    }
+    console.log('Paradigm API key found, making real API calls');
+    console.log('Workflow type:', workflow_type);
+    console.log('Parameters:', JSON.stringify(parsedParameters, null, 2));
 
     let result;
     let explanation = '';
@@ -121,9 +121,11 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('Workflow execution error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json({ 
       error: 'Failed to execute workflow',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     }, { status: 500 });
   }
 }
