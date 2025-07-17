@@ -33,6 +33,15 @@ IMPORTANT: Use these exact step type names in your workflow:
 - "image_analysis" (or "imageanalysis") for image analysis
 - "query" (or "search") for document chunk retrieval
 - "chat_completion" (or "chat" or "completion") for chat completions
+- "multi_sentence_workflow" for workflows that split input into sentences and process each separately
+
+SPECIAL INSTRUCTIONS FOR MULTI-SENTENCE WORKFLOWS:
+If the workflow description mentions splitting input into sentences or processing multiple questions separately:
+- Use workflow_type: "multi_sentence_workflow"
+- The system will automatically split the user input into sentences
+- Each sentence will be processed as a separate document search
+- Results will be combined into a coherent final answer
+- Format: "Question: [sentence] Answer: [search result]"
 
 Note: Web search is NOT available via the Paradigm API. If the user requests web search, do NOT include those steps in the workflow. Instead, add an explanation in the final answer to the user stating that web search is not available via the Paradigm API.
 
@@ -56,10 +65,10 @@ The tool config should include:
 
 Example response format:
 {
-  "executable_code": "async function executeWorkflow(question) { const response = await fetch('https://scaffold-ai-test1.vercel.app/api/execute-workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workflow_type: 'multi_step_workflow', parameters: JSON.stringify({ steps: [{ type: 'document_search', query: 'What is AI workflow automation?', model: 'alfred-4.2' }] }) }) }); return response.json(); }",
+  "executable_code": "async function executeWorkflow(userInput) { const response = await fetch('https://scaffold-ai-test1.vercel.app/api/execute-workflow', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workflow_type: 'multi_sentence_workflow', parameters: JSON.stringify({ user_input: userInput }) }) }); return response.json(); }",
   "tool_config": {
-    "name": "Scaffold AI Workflow Executor",
-    "description": "Executes AI workflows by calling the Scaffold.ai API endpoint which handles Paradigm API integration. Supports chat completion, document search, document analysis, image analysis, and query operations. Web search is not available.",
+    "name": "Multi-Sentence Document Search",
+    "description": "Splits user input into sentences and searches documents for each sentence separately, then combines results into a coherent answer.",
     "http_method": "POST",
     "url": "https://scaffold-ai-test1.vercel.app/api/execute-workflow",
     "headers": {"Authorization": "Bearer YOUR_API_KEY"},

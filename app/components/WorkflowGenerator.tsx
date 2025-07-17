@@ -20,11 +20,9 @@ export default function WorkflowGenerator() {
   const [chatError, setChatError] = useState("");
   const [chatResponse, setChatResponse] = useState<string | null>(null);
 
-  // Example workflow config for demo
-  const DEMO_WORKFLOW_TYPE = "multi_sentence_workflow";
-  const getDemoParameters = (userQuestion: string) => ({
-    user_input: userQuestion
-  });
+  // Demo workflow - will be generated dynamically
+  const [demoWorkflow, setDemoWorkflow] = useState<any>(null);
+  const [demoWorkflowLoading, setDemoWorkflowLoading] = useState(false);
 
   const handleGenerate = async () => {
     if (!input.trim()) {
@@ -94,19 +92,47 @@ export default function WorkflowGenerator() {
       setChatError("Please enter a question to test the workflow.");
       return;
     }
+    
+    // Generate workflow if not already generated
+    if (!demoWorkflow) {
+      setDemoWorkflowLoading(true);
+      try {
+        const workflowResponse = await fetch("/api/generate-workflow", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ 
+            description: "input: user asks questions in their prompt workflow: for every new sentence (ie at the end of a full stop, exclamation mark or question mark), launch a new search in the documents in paradigm only on the one sentence. each time, store the answer from the doc search somewhere. output: the final generated answer should use all the doc search answer to provide a final answer of the form: 'question' followed by the original user sentence or question and 'answer' followed by the answer from the doc search to that specific question."
+          }),
+        });
+        
+        const workflowData = await workflowResponse.json();
+        if (!workflowResponse.ok) {
+          throw new Error(workflowData.error || "Failed to generate workflow");
+        }
+        
+        setDemoWorkflow(workflowData);
+      } catch (err) {
+        setChatError("Failed to generate demo workflow: " + (err instanceof Error ? err.message : "Unknown error"));
+        setDemoWorkflowLoading(false);
+        return;
+      } finally {
+        setDemoWorkflowLoading(false);
+      }
+    }
+    
     setChatLoading(true);
     try {
-      const demoParameters = getDemoParameters(chatInput);
-      console.log('Sending demo parameters:', demoParameters);
-      
+      // Use the generated workflow to execute the chat
       const response = await fetch("https://scaffold-ai-test1.vercel.app/api/execute-workflow", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          workflow_type: DEMO_WORKFLOW_TYPE,
-          parameters: JSON.stringify(demoParameters)
+          workflow_type: "multi_sentence_workflow",
+          parameters: JSON.stringify({ user_input: chatInput })
         })
       });
       
@@ -301,7 +327,7 @@ export default function WorkflowGenerator() {
               <Sparkles className="h-5 w-5 text-blue-400" />
               Demo: Test Your Workflow
             </h3>
-            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the generated workflow using the live API endpoint. This demo uses a multi-sentence document search workflow that splits your input into individual questions.</p>
+            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the workflow generator. This demo automatically generates a multi-sentence document search workflow and executes it with your input.</p>
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <input
                 type="text"
@@ -314,15 +340,15 @@ export default function WorkflowGenerator() {
               />
               <button
                 onClick={handleChatSend}
-                disabled={chatLoading}
+                disabled={chatLoading || demoWorkflowLoading}
                 className="btn-primary px-6 py-2 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {chatLoading ? (
+                {chatLoading || demoWorkflowLoading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                 ) : (
                   <Sparkles className="h-5 w-5" />
                 )}
-                Test Workflow
+                {demoWorkflowLoading ? 'Generating Workflow...' : chatLoading ? 'Executing...' : 'Test Workflow'}
               </button>
             </div>
             {chatError && (
