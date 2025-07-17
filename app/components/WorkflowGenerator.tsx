@@ -21,12 +21,10 @@ export default function WorkflowGenerator() {
   const [chatResponse, setChatResponse] = useState<string | null>(null);
 
   // Example workflow config for demo
-  const DEMO_WORKFLOW_TYPE = "multi_step_workflow";
+  const DEMO_WORKFLOW_TYPE = "document_search";
   const getDemoParameters = (userQuestion: string) => ({
-    steps: [
-      { type: "docsearch", query: userQuestion },
-      { type: "websearch", query: userQuestion }
-    ]
+    query: userQuestion,
+    model: "alfred-4.2"
   });
 
   const handleGenerate = async () => {
@@ -100,6 +98,8 @@ export default function WorkflowGenerator() {
     setChatLoading(true);
     try {
       const demoParameters = getDemoParameters(chatInput);
+      console.log('Sending demo parameters:', demoParameters);
+      
       const response = await fetch("https://scaffold-ai-test1.vercel.app/api/execute-workflow", {
         method: "POST",
         headers: {
@@ -110,31 +110,51 @@ export default function WorkflowGenerator() {
           parameters: JSON.stringify(demoParameters)
         })
       });
+      
       const data = await response.json();
+      console.log('API Response:', data);
+      
       if (!response.ok) {
         throw new Error(data.error || "Failed to execute workflow");
       }
+      
       let finalResponse = "";
       if (data.result) {
         if (data.workflow_type === 'multi_step_workflow' && data.result.workflow_results) {
+          console.log('Processing multi-step workflow results:', data.result.workflow_results);
           // Find the last step with a result that has content/answer/response
-          const lastStep = [...data.result.workflow_results].reverse().find((step: any) => step.result && (step.result.content || step.result.answer || step.result.response));
+          const lastStep = [...data.result.workflow_results].reverse().find((step: any) => {
+            console.log('Checking step:', step.step, 'result:', step.result);
+            return step.result && (step.result.content || step.result.answer || step.result.response);
+          });
+          
           if (lastStep && lastStep.result) {
             finalResponse = lastStep.result.content || lastStep.result.answer || lastStep.result.response || '';
+            console.log('Found final response from step:', lastStep.step, 'Response:', finalResponse);
+          } else {
+            console.log('No valid step found with content/answer/response');
           }
         } else if (data.result.content) {
           finalResponse = data.result.content;
+          console.log('Using single-step content:', finalResponse);
         } else if (data.result.answer) {
           finalResponse = data.result.answer;
+          console.log('Using single-step answer:', finalResponse);
         } else if (data.result.response) {
           finalResponse = data.result.response;
+          console.log('Using single-step response:', finalResponse);
         }
       }
+      
       if (!finalResponse) {
         finalResponse = "Workflow executed successfully, but no answer was returned.";
+        console.log('No final response found, using fallback message');
       }
+      
+      console.log('Setting final response:', finalResponse);
       setChatResponse(finalResponse);
     } catch (err) {
+      console.error('Chat send error:', err);
       setChatError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setChatLoading(false);
@@ -278,7 +298,7 @@ export default function WorkflowGenerator() {
               <Sparkles className="h-5 w-5 text-blue-400" />
               Demo: Test Your Workflow
             </h3>
-            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the generated workflow using the live API endpoint. This demo uses a sample multi-step workflow.</p>
+            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the generated workflow using the live API endpoint. This demo uses a sample document search workflow.</p>
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <input
                 type="text"
