@@ -105,7 +105,51 @@ export function parseWorkflowCode(code: string): ParsedWorkflow {
       };
     }
 
-    // Pattern 4: Multi-step workflow with steps array
+    // Pattern 4: Multi-step workflow with multiple API calls (check this BEFORE single workflow patterns)
+    // First, count how many workflow_type patterns we find
+    const workflowTypeMatches = rawCode.match(/workflow_type:\s*['"`]([^'"`]+)['"`]/g);
+    const hasMultipleWorkflows = workflowTypeMatches && workflowTypeMatches.length > 1;
+    
+    if (hasMultipleWorkflows) {
+      // Extract all workflow steps from the code
+      const workflowSteps = [];
+      const stepRegex = /workflow_type:\s*['"`]([^'"`]+)['"`]\s*,\s*parameters:\s*JSON\.stringify\(\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})\s*\)/g;
+      let stepMatch;
+      
+      while ((stepMatch = stepRegex.exec(rawCode)) !== null) {
+        try {
+          const stepType = stepMatch[1];
+          const stepParamsStr = stepMatch[2];
+          
+          // Clean up the parameters string
+          let cleanParams = stepParamsStr
+            .replace(/(\w+):/g, '"$1":')
+            .replace(/'/g, '"')
+            .replace(/,(\s*[}\]])/g, '$1')
+            .replace(/:\s*(\w+)(?=\s*[,\}])/g, ': ""');
+          
+          const stepParams = JSON.parse(cleanParams);
+          
+          workflowSteps.push({
+            type: stepType,
+            ...stepParams
+          });
+        } catch (parseError) {
+          console.warn(`Failed to parse step parameters: ${parseError}`);
+        }
+      }
+      
+      if (workflowSteps.length > 1) {
+        return {
+          workflow_type: 'multi_step_workflow',
+          parameters: { steps: workflowSteps },
+          rawCode,
+          isValid: true
+        };
+      }
+    }
+
+    // Pattern 5: Multi-step workflow with steps array
     const multiStepPattern = /steps:\s*\[([^\]]+)\]/;
     const multiStepMatch = rawCode.match(multiStepPattern);
     
@@ -130,7 +174,7 @@ export function parseWorkflowCode(code: string): ParsedWorkflow {
       }
     }
 
-    // Pattern 5: Simple query parameter
+    // Pattern 6: Simple query parameter
     const queryPattern = /query:\s*['"`]([^'"`]+)['"`]/;
     const queryMatch = rawCode.match(queryPattern);
     
@@ -144,7 +188,7 @@ export function parseWorkflowCode(code: string): ParsedWorkflow {
       };
     }
 
-    // Pattern 6: Function that calls executeWorkflow with userInput parameter
+    // Pattern 7: Function that calls executeWorkflow with userInput parameter
     const userInputPattern = /executeWorkflow\(\s*userInput\s*\)/;
     const userInputMatch = rawCode.match(userInputPattern);
     
@@ -157,7 +201,7 @@ export function parseWorkflowCode(code: string): ParsedWorkflow {
       };
     }
 
-    // Pattern 7: Function that calls executeWorkflow with query parameter
+    // Pattern 8: Function that calls executeWorkflow with query parameter
     const queryParamPattern = /executeWorkflow\(\s*query\s*\)/;
     const queryParamMatch = rawCode.match(queryParamPattern);
     
