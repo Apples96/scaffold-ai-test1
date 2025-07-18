@@ -12,7 +12,7 @@ const LightOnLogoSimple: React.FC<LightOnLogoSimpleProps> = ({
   return (
     <div style={{ position: 'relative', width: size, height: size }}>
       <img
-        src={`/white_background.png?v=${Date.now()}`}
+        src="/white_background.png"
         alt="LightOn Logo"
         width={size}
         height={size}

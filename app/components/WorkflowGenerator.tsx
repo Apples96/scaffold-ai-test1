@@ -146,21 +146,31 @@ export default function WorkflowGenerator() {
 
       let parametersString = parametersMatch[1];
       
-      // Replace JavaScript variables with actual values
+      // More robust parameter string cleaning
       parametersString = parametersString
+        // Replace JavaScript variables with actual values
         .replace(/userInput/g, `"${directExecutionInput}"`)
+        .replace(/query\s*:\s*query/g, `"query": "${directExecutionInput}"`)
         .replace(/\$\{process\.env\.API_KEY\}/g, '"API_KEY"')
         .replace(/\$\{([^}]+)\}/g, '"$1"') // Replace template literals with quoted strings
-        .replace(/(\w+):/g, '"$1":') // Add quotes to property names
+        // Handle property names more carefully
+        .replace(/(\w+):\s*(?=["{[])/g, '"$1":') // Add quotes to property names before values
+        .replace(/(\w+):\s*(?=\w)/g, '"$1":') // Add quotes to property names before unquoted values
+        // Handle string values
         .replace(/'/g, '"') // Replace single quotes with double quotes
-        .replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
+        // Clean up trailing commas and other JSON issues
+        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+        .replace(/,\s*,/g, ',') // Remove double commas
+        .replace(/,\s*}/g, '}') // Remove trailing commas before closing braces
+        .replace(/,\s*]/g, ']'); // Remove trailing commas before closing brackets
 
       let parameters;
       try {
+        // Try to parse the cleaned JSON
         parameters = JSON.parse(parametersString);
       } catch (parseError) {
-        // If JSON parsing fails, try to create a simple workflow structure
         console.warn('Failed to parse complex parameters, creating simple workflow:', parseError);
+        console.warn('Problematic JSON string:', parametersString);
         
         // Create a simple document search workflow as fallback
         parameters = {
