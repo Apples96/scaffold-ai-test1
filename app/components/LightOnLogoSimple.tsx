@@ -19,14 +19,10 @@ const LightOnLogoSimple: React.FC<LightOnLogoSimpleProps> = ({
         className={`object-contain ${className}`}
         style={{ 
           width: size, 
-          height: size,
-          border: '3px solid red', // Debug border to see if image loads
-          backgroundColor: 'rgba(255, 0, 0, 0.1)' // Light red background to see the area
+          height: size
         }}
         onLoad={() => {
           console.log('✅ LightOn logo loaded successfully');
-          const target = event?.target as HTMLImageElement;
-          if (target) target.style.border = 'none';
         }}
         onError={(e) => {
           console.error('❌ Failed to load LightOn logo:', e);

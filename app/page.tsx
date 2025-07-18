@@ -23,7 +23,7 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
         <div className="container-max px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-32">
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3">
               <LightOnLogoSimple size={120} />
               <h1 className="text-2xl font-bold text-white tracking-wide">scaffold.ai</h1>
             </div>
@@ -332,7 +332,7 @@ export default function Home() {
       <footer className="border-t border-white/10 py-12">
         <div className="container-max">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-6 mb-4 md:mb-0">
+            <div className="flex items-center space-x-3 mb-4 md:mb-0">
               <LightOnLogoSimple size={100} />
               <h3 className="text-xl font-bold text-white tracking-wide">scaffold.ai</h3>
             </div>
