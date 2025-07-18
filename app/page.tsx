@@ -22,10 +22,10 @@ export default function Home() {
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
         <div className="container-max px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <div className="flex items-center space-x-3">
-              <LightOnLogoSimple size={48} />
-              <h1 className="text-xl font-bold text-white">LightOn scaffold.ai</h1>
+          <div className="flex items-center justify-between h-24">
+            <div className="flex items-center space-x-4">
+              <LightOnLogoSimple size={80} />
+              <h1 className="text-2xl font-bold text-white tracking-wide">LightOn scaffold.ai</h1>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-white/70 hover:text-white transition-colors">Features</a>
@@ -37,7 +37,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="section-padding pt-36">
+      <section className="section-padding pt-40">
         <div className="container-max text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -332,9 +332,9 @@ export default function Home() {
       <footer className="border-t border-white/10 py-12">
         <div className="container-max">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-3 mb-4 md:mb-0">
-              <LightOnLogoSimple size={40} />
-              <h3 className="text-xl font-bold text-white">LightOn scaffold.ai</h3>
+            <div className="flex items-center space-x-4 mb-4 md:mb-0">
+              <LightOnLogoSimple size={60} />
+              <h3 className="text-xl font-bold text-white tracking-wide">LightOn scaffold.ai</h3>
             </div>
             <div className="flex space-x-8 text-sm text-white/70">
               <a href="#features" className="hover:text-white transition-colors">Features</a>
