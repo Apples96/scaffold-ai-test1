@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
 
 export async function POST(req: NextRequest) {
   const { executableCode } = await req.json();
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
-    return NextResponse.json({ error: 'OpenAI API key not set.' }, { status: 500 });
+    return NextResponse.json({ error: 'Anthropic API key not set.' }, { status: 500 });
   }
   if (!executableCode || typeof executableCode !== 'string') {
     return NextResponse.json({ error: 'Missing or invalid executable code.' }, { status: 400 });
@@ -42,47 +43,40 @@ Return ONLY the workflow description in clear, numbered steps. Do not include an
   try {
     console.log('Generating workflow description for code length:', executableCode.length);
     
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert at explaining technical workflows in simple terms. Return ONLY the workflow description without any markdown formatting or explanatory text.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 1000
-      })
+    const anthropic = new Anthropic({
+      apiKey: apiKey,
     });
 
-    console.log('OpenAI response status:', response.status);
+    const response = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 1000,
+      temperature: 0.3,
+      messages: [
+        {
+          role: 'user',
+          content: `You are an expert at explaining technical workflows in simple terms. Return ONLY the workflow description without any markdown formatting or explanatory text.
+
+${prompt}`
+        }
+      ]
+    });
+
+    console.log('Claude Code response status:', response.stop_reason);
     
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('OpenAI API error details:', errorData);
+    if (response.stop_reason !== 'end_turn') {
+      console.error('Claude Code API error details:', response);
       
       return NextResponse.json({ 
-        error: `OpenAI API error: ${errorData.error?.message || errorData.error?.type || 'Unknown error'}`,
-        details: errorData,
-        status: response.status
+        error: `Claude Code API error: ${response.stop_reason || 'Unknown error'}`,
+        details: response,
+        status: 500
       }, { status: 500 });
     }
 
-    const data = await response.json();
-    const generatedDescription = data.choices[0]?.message?.content;
+    const generatedDescription = response.content[0]?.type === 'text' ? response.content[0].text : null;
 
     if (!generatedDescription) {
-      return NextResponse.json({ error: 'No description generated from OpenAI' }, { status: 500 });
+      return NextResponse.json({ error: 'No description generated from Claude Code' }, { status: 500 });
     }
 
     console.log('Generated description length:', generatedDescription.length);
@@ -92,9 +86,9 @@ Return ONLY the workflow description in clear, numbered steps. Do not include an
     });
 
   } catch (error) {
-    console.error('Error generating workflow description:', error);
+    console.error('Error generating workflow description with Claude Code:', error);
     return NextResponse.json({ 
-      error: 'Failed to generate workflow description',
+      error: 'Failed to generate workflow description with Claude Code',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }

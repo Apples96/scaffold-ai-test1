@@ -1,152 +1,122 @@
-"use client"
+'use client';
 
-import { useState, useRef } from "react";
-import { Copy, Check, Sparkles, Code, Settings, Play, AlertCircle } from "lucide-react";
-import { motion } from "framer-motion";
-import ReactMarkdown from 'react-markdown';
-import { parseWorkflowCode, executeWorkflowDirectly, validateWorkflowCode } from '../utils/workflowParser';
+import { useState } from 'react';
 
-const PLACEHOLDER = `Describe the input (user action and any provided data, such as prompts or documents). Specify the expected output (AI system response, including any artifacts like reports or actions in external tools). Clearly outline each intermediate step, detailing the inputs, outputs, and any additional tools, documents, or data sources involved.`;
+interface WorkflowResult {
+  executable_code: string;
+  tool_config: any;
+}
+
+interface ExecutionResult {
+  success: boolean;
+  result: any;
+  workflow_type: string;
+  executed_at: string;
+}
 
 export default function WorkflowGenerator() {
-  const [input, setInput] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [executableCode, setExecutableCode] = useState("");
-  const [toolConfig, setToolConfig] = useState("");
-  const [error, setError] = useState("");
-  const [copiedExecutable, setCopiedExecutable] = useState(false);
-  const [copiedConfig, setCopiedConfig] = useState(false);
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatError, setChatError] = useState("");
-  const [chatResponse, setChatResponse] = useState<string | null>(null);
-  const [workflowDescription, setWorkflowDescription] = useState<string>("");
-  const [workflowDescriptionLoading, setWorkflowDescriptionLoading] = useState(false);
-
-  // Direct execution functionality
-  const [directExecutionInput, setDirectExecutionInput] = useState("");
+  const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<WorkflowResult | null>(null);
+  const [descriptionLoading, setDescriptionLoading] = useState(false);
+  const [workflowDescription, setWorkflowDescription] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
+  
+  // Direct execution state
+  const [directExecutionInput, setDirectExecutionInput] = useState('');
   const [directExecutionLoading, setDirectExecutionLoading] = useState(false);
-  const [directExecutionResult, setDirectExecutionResult] = useState<any>(null);
-  const [directExecutionError, setDirectExecutionError] = useState("");
-  const [parsedWorkflow, setParsedWorkflow] = useState<any>(null);
+  const [directExecutionError, setDirectExecutionError] = useState('');
+  const [directExecutionResult, setDirectExecutionResult] = useState<ExecutionResult | null>(null);
 
-  // Auto-parse workflow when executable code changes
-  const parseWorkflowOnChange = (code: string) => {
-    if (code.trim()) {
-      const parsed = parseWorkflowCode(code);
-      setParsedWorkflow(parsed);
-    } else {
-      setParsedWorkflow(null);
-    }
-  };
-
-  // Demo workflow - will be generated dynamically
-  const [demoWorkflow, setDemoWorkflow] = useState<any>(null);
-  const [demoWorkflowLoading, setDemoWorkflowLoading] = useState(false);
-
-  const handleGenerate = async () => {
-    if (!input.trim()) {
-      setError("Please enter a workflow description");
+  const generateWorkflow = async () => {
+    if (!description.trim()) {
+      setError('Please enter a workflow description');
       return;
     }
 
-    setIsGenerating(true);
-    setError("");
-    setExecutableCode("");
-    setToolConfig("");
-    setWorkflowDescription("");
-    setDirectExecutionInput("");
-    setDirectExecutionResult(null);
-    setDirectExecutionError("");
-    setParsedWorkflow(null);
+    setLoading(true);
+    setError('');
+    setResult(null);
 
     try {
-      const response = await fetch("/api/generate-workflow", {
-        method: "POST",
+      const response = await fetch('/api/generate-workflow', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ description: input }),
+        body: JSON.stringify({ description }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate workflow");
+        throw new Error(data.error || 'Failed to generate workflow');
       }
 
-      if (data.executable_code && data.tool_config) {
-        setExecutableCode(data.executable_code);
-        // Generate workflow description from the executable code
-        generateWorkflowDescription(data.executable_code);
-        // Parse the workflow for direct execution
-        parseWorkflowOnChange(data.executable_code);
-        // Ensure tool_config is properly formatted as JSON string
-        setToolConfig(typeof data.tool_config === 'string' 
-          ? data.tool_config 
-          : JSON.stringify(data.tool_config, null, 2)
-        );
-      } else if (data.raw_response) {
-        setExecutableCode(data.raw_response);
-        generateWorkflowDescription(data.raw_response);
-        // Parse the workflow for direct execution
-        parseWorkflowOnChange(data.raw_response);
-        setToolConfig("See executable code for complete configuration");
-      } else {
-        throw new Error("Invalid response format");
-      }
+      setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
     }
   };
 
-  const copyToClipboard = async (text: string, type: 'executable' | 'config') => {
-    try {
-      await navigator.clipboard.writeText(text);
-      if (type === 'executable') {
-        setCopiedExecutable(true);
-        setTimeout(() => setCopiedExecutable(false), 2000);
-      } else {
-        setCopiedConfig(true);
-        setTimeout(() => setCopiedConfig(false), 2000);
-      }
-    } catch (err) {
-      console.error("Failed to copy:", err);
+  const generateDescription = async () => {
+    if (!result?.executable_code) {
+      setDescriptionError('No workflow code available');
+      return;
     }
-  };
 
-  const generateWorkflowDescription = async (code: string) => {
-    if (!code.trim()) return;
-    
-    setWorkflowDescriptionLoading(true);
+    setDescriptionLoading(true);
+    setDescriptionError('');
+    setWorkflowDescription('');
+
     try {
-      const response = await fetch("/api/generate-workflow-description", {
-        method: "POST",
+      const response = await fetch('/api/generate-workflow-description', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ executableCode: code }),
+        body: JSON.stringify({ executableCode: result.executable_code }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Failed to generate workflow description:', data.error);
-        return;
+        throw new Error(data.error || 'Failed to generate description');
       }
 
-      setWorkflowDescription(data.workflow_description);
+      setWorkflowDescription(data.description);
     } catch (err) {
-      console.error('Error generating workflow description:', err);
+      setDescriptionError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
-      setWorkflowDescriptionLoading(false);
+      setDescriptionLoading(false);
     }
   };
 
-  const handleDirectExecution = async () => {
-    if (!executableCode.trim()) {
+  const executeWorkflowDirectly = async (workflowData: any): Promise<ExecutionResult> => {
+    const response = await fetch('/api/execute-workflow', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        workflow_type: workflowData.workflow_type,
+        parameters: JSON.stringify(workflowData.parameters)
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to execute workflow');
+    }
+
+    return await response.json();
+  };
+
+  const executeWorkflow = async () => {
+    if (!result?.executable_code) {
       setDirectExecutionError("No workflow code available to execute");
       return;
     }
@@ -161,497 +131,188 @@ export default function WorkflowGenerator() {
     setDirectExecutionResult(null);
 
     try {
-      // Parse the workflow code
-      const parsed = parseWorkflowCode(executableCode);
-      setParsedWorkflow(parsed);
-
-      if (!parsed.isValid) {
-        throw new Error(`Invalid workflow: ${parsed.error}`);
-      }
-
-      // Validate the workflow
-      const validation = validateWorkflowCode(executableCode);
-      if (!validation.isValid) {
-        throw new Error(validation.error || "Workflow validation failed");
-      }
-
-      // Update parameters with user input if needed
-      let executionParameters = { ...parsed.parameters };
+      // Extract workflow parameters from the generated code
+      const codeMatch = result.executable_code.match(/JSON\.stringify\(\s*\{[^}]*workflow_type:\s*['"`]([^'"`]+)['"`][^}]*parameters:\s*JSON\.stringify\(\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})\s*\)[^}]*\}\s*\)/);
       
-      // For multi-sentence workflows, update the user_input
-      if (parsed.workflow_type === 'multi_sentence_workflow') {
-        executionParameters.user_input = directExecutionInput;
-      }
-      
-      // For document search workflows, update the query
-      if (parsed.workflow_type === 'document_search') {
-        executionParameters.query = directExecutionInput;
+      if (!codeMatch) {
+        throw new Error("Could not extract workflow parameters from generated code");
       }
 
-      // For chat completion workflows, update the messages
-      if (parsed.workflow_type === 'chat_completion' && executionParameters.messages) {
-        // Add user message to the messages array
-        const userMessage = { role: 'user', content: directExecutionInput };
-        executionParameters.messages = [...executionParameters.messages, userMessage];
+      const workflowType = codeMatch[1];
+      let parameters;
+      
+      try {
+        // Clean up the parameters string to make it valid JSON
+        let cleanParams = codeMatch[2]
+          .replace(/(\w+):/g, '"$1":') // Add quotes to property names
+          .replace(/'/g, '"') // Replace single quotes with double quotes
+          .replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
+        
+        parameters = JSON.parse(cleanParams);
+      } catch (parseError) {
+        throw new Error(`Failed to parse workflow parameters: ${parseError}`);
+      }
+
+      // Update parameters with user input
+      if (parameters.search_query) {
+        parameters.search_query = directExecutionInput;
+      }
+      if (parameters.query) {
+        parameters.query = directExecutionInput;
+      }
+      if (parameters.user_input) {
+        parameters.user_input = directExecutionInput;
       }
 
       // Execute the workflow
-      const result = await executeWorkflowDirectly({
-        ...parsed,
-        parameters: executionParameters
+      const executionResult = await executeWorkflowDirectly({
+        workflow_type: workflowType,
+        parameters: parameters
       });
 
-      setDirectExecutionResult(result);
-    } catch (err) {
-      console.error('Direct execution error:', err);
-      setDirectExecutionError(err instanceof Error ? err.message : "An error occurred during execution");
+      setDirectExecutionResult(executionResult);
+    } catch (error) {
+      setDirectExecutionError(error instanceof Error ? error.message : 'Execution failed');
     } finally {
       setDirectExecutionLoading(false);
     }
   };
 
-  const handleChatSend = async () => {
-    setChatError("");
-    setChatResponse(null);
-    if (!chatInput.trim()) {
-      setChatError("Please enter a question to test the workflow.");
-      return;
-    }
-    
-    // Generate workflow if not already generated
-    if (!demoWorkflow) {
-      setDemoWorkflowLoading(true);
-      try {
-        const workflowResponse = await fetch("/api/generate-workflow", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ 
-            description: "input: user asks questions in their prompt workflow: for every new sentence (ie at the end of a full stop, exclamation mark or question mark), launch a new search in the documents in paradigm only on the one sentence. each time, store the answer from the doc search somewhere. output: the final generated answer should use all the doc search answer to provide a final answer of the form: 'question' followed by the original user sentence or question and 'answer' followed by the answer from the doc search to that specific question."
-          }),
-        });
-        
-        const workflowData = await workflowResponse.json();
-        if (!workflowResponse.ok) {
-          throw new Error(workflowData.error || "Failed to generate workflow");
-        }
-        
-        setDemoWorkflow(workflowData);
-      } catch (err) {
-        setChatError("Failed to generate demo workflow: " + (err instanceof Error ? err.message : "Unknown error"));
-        setDemoWorkflowLoading(false);
-        return;
-      } finally {
-        setDemoWorkflowLoading(false);
-      }
-    }
-    
-    setChatLoading(true);
-    try {
-      // Use the generated workflow to execute the chat
-      const response = await fetch("https://scaffold-ai-test1.vercel.app/api/execute-workflow", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          workflow_type: "multi_sentence_workflow",
-          parameters: JSON.stringify({ user_input: chatInput })
-        })
-      });
-      
-      const data = await response.json();
-      console.log('API Response:', data);
-      
-      if (!response.ok) {
-        if (data.error === 'Paradigm API key not configured') {
-          throw new Error("Paradigm API key not configured. Please set the PARADIGM_API_KEY environment variable to test workflows.");
-        }
-        throw new Error(data.error || "Failed to execute workflow");
-      }
-      
-      let finalResponse = "";
-      if (data.result) {
-        if (data.workflow_type === 'multi_sentence_workflow' && data.result.final_answer) {
-          // Use the final formatted answer from multi-sentence workflow
-          finalResponse = data.result.final_answer;
-          console.log('Using multi-sentence final answer:', finalResponse);
-        } else if (data.workflow_type === 'multi_step_workflow' && data.result.workflow_results) {
-          console.log('Processing multi-step workflow results:', data.result.workflow_results);
-          // Find the last step with a result that has content/answer/response
-          const lastStep = [...data.result.workflow_results].reverse().find((step: any) => {
-            console.log('Checking step:', step.step, 'result:', step.result);
-            return step.result && (step.result.content || step.result.answer || step.result.response);
-          });
-          
-          if (lastStep && lastStep.result) {
-            finalResponse = lastStep.result.content || lastStep.result.answer || lastStep.result.response || '';
-            console.log('Found final response from step:', lastStep.step, 'Response:', finalResponse);
-          } else {
-            console.log('No valid step found with content/answer/response');
-          }
-        } else if (data.result.content) {
-          finalResponse = data.result.content;
-          console.log('Using single-step content:', finalResponse);
-        } else if (data.result.answer) {
-          finalResponse = data.result.answer;
-          console.log('Using single-step answer:', finalResponse);
-        } else if (data.result.response) {
-          finalResponse = data.result.response;
-          console.log('Using single-step response:', finalResponse);
-        }
-      }
-      
-      if (!finalResponse) {
-        finalResponse = "Workflow executed successfully, but no answer was returned.";
-        console.log('No final response found, using fallback message');
-      }
-      
-      console.log('Setting final response:', finalResponse);
-      setChatResponse(finalResponse);
-    } catch (err) {
-      console.error('Chat send error:', err);
-      setChatError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setChatLoading(false);
-    }
-  }
-
   return (
-    <section className="section-padding bg-gray-900/50">
-      <div className="container-max">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-16"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Generate Executable
-            <span className="text-gradient block">AI Workflows</span>
-          </h2>
-          <p className="text-xl text-white/70 max-w-3xl mx-auto">
-            Describe your workflow in natural language and get both executable code and Paradigm tool configuration.
-          </p>
-        </motion.div>
-
-        <div className="max-w-4xl mx-auto">
-          {/* Input Section */}
-          <div className="mb-8">
-            <label className="block text-sm font-medium text-white/80 mb-3">
-              Workflow Description
+    <div className="max-w-4xl mx-auto p-6 space-y-8">
+      {/* Workflow Generation Section */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-2xl font-bold mb-4 text-gray-800">Generate Workflow</h2>
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              Describe your workflow
             </label>
             <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={PLACEHOLDER}
-              className="w-full h-32 px-4 py-3 bg-gray-800/50 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g., Search for customer feedback, analyze sentiment, and generate a prioritized action plan"
+              className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-
-          {/* Generate Button */}
-          <div className="text-center mb-8">
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="btn-primary flex items-center gap-2 mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGenerating ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-5 w-5" />
-                  Generate Workflow
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Error Display */}
+          <button
+            onClick={generateWorkflow}
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Generating...' : 'Generate Workflow'}
+          </button>
           {error && (
-            <div className="mb-8 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-400">{error}</p>
-            </div>
+            <div className="text-red-600 text-sm">{error}</div>
           )}
-
-          {/* Results Section */}
-          {(executableCode || toolConfig) && (
-            <div className="space-y-8">
-              {/* Executable Code */}
-              {executableCode && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Code className="h-5 w-5 text-blue-400" />
-                    <h3 className="text-lg font-semibold text-white">Executable Code</h3>
-                    <span className="text-xs text-white/50 ml-2">(Editable - changes will update workflow parsing)</span>
-                  </div>
-                  <div className="relative">
-                    <textarea
-                      value={executableCode}
-                      onChange={(e) => {
-                        setExecutableCode(e.target.value);
-                        parseWorkflowOnChange(e.target.value);
-                      }}
-                      className="w-full h-64 px-4 py-3 bg-gray-800/50 border border-white/10 rounded-lg text-white font-mono text-sm resize-none"
-                    />
-                    <button
-                      onClick={() => copyToClipboard(executableCode, 'executable')}
-                      className="absolute top-3 right-3 p-2 bg-gray-700/50 hover:bg-gray-600/50 rounded-md transition-colors"
-                    >
-                      {copiedExecutable ? (
-                        <Check className="h-4 w-4 text-green-400" />
-                      ) : (
-                        <Copy className="h-4 w-4 text-white/70" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Workflow Description */}
-              {workflowDescription && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="h-5 w-5 text-green-400" />
-                    <h3 className="text-lg font-semibold text-white">Workflow Description</h3>
-                  </div>
-                  <div className="bg-gray-800/50 border border-white/10 rounded-lg p-4">
-                    <div className="text-white/90 text-sm leading-relaxed whitespace-pre-line">
-                      {workflowDescription}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Show loading indicator while generating description */}
-              {workflowDescriptionLoading && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="h-5 w-5 text-green-400" />
-                    <h3 className="text-lg font-semibold text-white">Workflow Description</h3>
-                  </div>
-                  <div className="bg-gray-800/50 border border-white/10 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-white/70">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-400"></div>
-                      <span>Generating workflow description...</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Direct Execution Section */}
-              {executableCode && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Play className="h-5 w-5 text-orange-400" />
-                    <h3 className="text-lg font-semibold text-white">Execute Workflow Directly</h3>
-                  </div>
-                  
-                  {/* Workflow Validation Status */}
-                  {parsedWorkflow && (
-                    <div className="mb-4 p-3 rounded-lg border">
-                      {parsedWorkflow.isValid ? (
-                        <div className="flex items-center gap-2 text-green-400">
-                          <Check className="h-4 w-4" />
-                          <span className="text-sm">
-                            Workflow Type: <code className="bg-gray-700 px-1 rounded">{parsedWorkflow.workflow_type}</code>
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 text-red-400">
-                          <AlertCircle className="h-4 w-4" />
-                          <span className="text-sm">Invalid workflow: {parsedWorkflow.error}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Execution Input */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-white/80 mb-2">
-                      Input for Workflow
-                    </label>
-                    <div className="flex gap-3">
-                      <input
-                        type="text"
-                        value={directExecutionInput}
-                        onChange={(e) => setDirectExecutionInput(e.target.value)}
-                        placeholder="Enter input for the workflow (e.g., query, question, etc.)"
-                        className="flex-1 px-4 py-2 bg-gray-800/50 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleDirectExecution(); }}
-                        disabled={directExecutionLoading}
-                      />
-                      <button
-                        onClick={handleDirectExecution}
-                        disabled={directExecutionLoading || !parsedWorkflow?.isValid}
-                        className="btn-primary px-6 py-2 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {directExecutionLoading ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        ) : (
-                          <Play className="h-5 w-5" />
-                        )}
-                        Execute
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Execution Error */}
-                  {directExecutionError && (
-                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                      <p className="text-red-400 text-sm">{directExecutionError}</p>
-                    </div>
-                  )}
-
-                  {/* Execution Result */}
-                  {directExecutionResult && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-white/80 mb-2">
-                        Execution Result
-                      </label>
-                      <div className="bg-gray-800/50 border border-white/10 rounded-lg p-4">
-                        <div className="text-white/90 text-sm">
-                          <div className="mb-2">
-                            <strong>Status:</strong> {directExecutionResult.success ? 'Success' : 'Failed'}
-                          </div>
-                          {directExecutionResult.workflow_type && (
-                            <div className="mb-2">
-                              <strong>Workflow Type:</strong> {directExecutionResult.workflow_type}
-                            </div>
-                          )}
-                          {directExecutionResult.explanation && (
-                            <div className="mb-2">
-                              <strong>Explanation:</strong> {directExecutionResult.explanation}
-                            </div>
-                          )}
-                          {directExecutionResult.result && (
-                            <div>
-                              <strong>Result:</strong>
-                              <div className="mt-2 p-3 bg-gray-900/50 rounded border border-white/5">
-                                {directExecutionResult.workflow_type === 'multi_step_workflow' && directExecutionResult.result.workflow_results ? (
-                                  <div className="space-y-3">
-                                    {directExecutionResult.result.workflow_results.map((step: any, index: number) => (
-                                      <div key={index} className="border-l-2 border-blue-500 pl-3">
-                                        <div className="font-semibold text-blue-400">Step {index + 1}: {step.step}</div>
-                                        {step.explanation && (
-                                          <div className="text-yellow-400 text-xs mt-1">{step.explanation}</div>
-                                        )}
-                                        {step.result && (
-                                          <div className="text-white/80 text-sm mt-1">
-                                            {typeof step.result === 'string' ? step.result : JSON.stringify(step.result, null, 2)}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : directExecutionResult.workflow_type === 'multi_sentence_workflow' && directExecutionResult.result.final_answer ? (
-                                  <div className="text-white/90 whitespace-pre-line">
-                                    {directExecutionResult.result.final_answer}
-                                  </div>
-                                ) : (
-                                  <ReactMarkdown>{JSON.stringify(directExecutionResult.result, null, 2)}</ReactMarkdown>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Tool Configuration */}
-              {toolConfig && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Settings className="h-5 w-5 text-purple-400" />
-                    <h3 className="text-lg font-semibold text-white">Paradigm Tool Configuration</h3>
-                  </div>
-                  <div className="relative">
-                    <textarea
-                      value={toolConfig}
-                      readOnly
-                      className="w-full h-48 px-4 py-3 bg-gray-800/50 border border-white/10 rounded-lg text-white font-mono text-sm resize-none"
-                    />
-                    <button
-                      onClick={() => copyToClipboard(toolConfig, 'config')}
-                      className="absolute top-3 right-3 p-2 bg-gray-700/50 hover:bg-gray-600/50 rounded-md transition-colors"
-                    >
-                      {copiedConfig ? (
-                        <Check className="h-4 w-4 text-green-400" />
-                      ) : (
-                        <Copy className="h-4 w-4 text-white/70" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Instructions */}
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
-                <h4 className="text-blue-400 font-semibold mb-2">Next Steps:</h4>
-                <ol className="text-white/80 text-sm space-y-1">
-                  <li>1. Copy the Paradigm Tool Configuration and paste it into Paradigm's "Add Third Party Tool" form</li>
-                  <li>2. The tool will point to your Vercel API endpoint: <code className="bg-gray-700 px-1 rounded">https://scaffold-ai-test1.vercel.app/api/execute-workflow</code></li>
-                  <li>3. Add your Paradigm API key to the environment variables</li>
-                  <li>4. The executable code shows how the workflow will be processed</li>
-                </ol>
-              </div>
-            </div>
-          )}
-        </div>
-        {/* Chat Demo Section */}
-        <div className="max-w-4xl mx-auto mt-16">
-          <div className="bg-gray-800/60 border border-blue-500/30 rounded-lg p-6 shadow-lg">
-            <h3 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-blue-400" />
-              Demo: Test Your Workflow
-            </h3>
-            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the workflow generator. This demo automatically generates a multi-sentence document search workflow and executes it with your input. <strong>Note: Requires a configured Paradigm API key.</strong></p>
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                placeholder="Ask a question to test the workflow..."
-                className="flex-1 px-4 py-2 rounded-lg bg-gray-900 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                onKeyDown={e => { if (e.key === 'Enter') handleChatSend(); }}
-                disabled={chatLoading}
-              />
-              <button
-                onClick={handleChatSend}
-                disabled={chatLoading || demoWorkflowLoading}
-                className="btn-primary px-6 py-2 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {chatLoading || demoWorkflowLoading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  <Sparkles className="h-5 w-5" />
-                )}
-                {demoWorkflowLoading ? 'Generating Workflow...' : chatLoading ? 'Executing...' : 'Test Workflow'}
-              </button>
-            </div>
-            {chatError && (
-              <div className="mb-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <p className="text-red-400 text-sm">{chatError}</p>
-              </div>
-            )}
-            {chatResponse && (
-              <div className="mt-4">
-                <label className="block text-white/80 mb-1 text-sm">Workflow Response:</label>
-                <div className="w-full min-h-24 max-h-80 overflow-auto px-4 py-3 bg-gray-900 border border-white/10 rounded-lg text-white text-sm prose prose-invert">
-                  <ReactMarkdown>{chatResponse}</ReactMarkdown>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
-    </section>
+
+      {/* Generated Workflow Results */}
+      {result && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-xl font-bold mb-4 text-gray-800">Generated Workflow</h3>
+          
+          {/* Executable Code */}
+          <div className="mb-6">
+            <h4 className="text-lg font-semibold mb-2 text-gray-700">Executable Code</h4>
+            <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
+              <code>{result.executable_code}</code>
+            </pre>
+          </div>
+
+          {/* Tool Configuration */}
+          <div className="mb-6">
+            <h4 className="text-lg font-semibold mb-2 text-gray-700">Tool Configuration</h4>
+            <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
+              <code>{JSON.stringify(result.tool_config, null, 2)}</code>
+            </pre>
+          </div>
+
+          {/* Generate Description Button */}
+          <div className="mb-6">
+            <button
+              onClick={generateDescription}
+              disabled={descriptionLoading}
+              className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {descriptionLoading ? 'Generating...' : 'Generate Description'}
+            </button>
+            {descriptionError && (
+              <div className="text-red-600 text-sm mt-2">{descriptionError}</div>
+            )}
+          </div>
+
+          {/* Workflow Description */}
+          {workflowDescription && (
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold mb-2 text-gray-700">Workflow Description</h4>
+              <div className="bg-blue-50 p-4 rounded-md">
+                <p className="text-gray-800 whitespace-pre-wrap">{workflowDescription}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Direct Execution Section */}
+      {result && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-xl font-bold mb-4 text-gray-800">Test Workflow</h3>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="execution-input" className="block text-sm font-medium text-gray-700 mb-2">
+                Input for workflow
+              </label>
+              <input
+                id="execution-input"
+                type="text"
+                value={directExecutionInput}
+                onChange={(e) => setDirectExecutionInput(e.target.value)}
+                placeholder="Enter your query or input"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <button
+              onClick={executeWorkflow}
+              disabled={directExecutionLoading}
+              className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {directExecutionLoading ? 'Executing...' : 'Execute Workflow'}
+            </button>
+            {directExecutionError && (
+              <div className="text-red-600 text-sm">{directExecutionError}</div>
+            )}
+          </div>
+
+          {/* Execution Results */}
+          {directExecutionResult && (
+            <div className="mt-6">
+              <h4 className="text-lg font-semibold mb-2 text-gray-700">Execution Results</h4>
+              <div className="bg-gray-100 p-4 rounded-md">
+                <div className="mb-2">
+                  <strong>Status:</strong> {directExecutionResult.success ? 'Success' : 'Failed'}
+                </div>
+                {directExecutionResult.workflow_type && (
+                  <div className="mb-2">
+                    <strong>Workflow Type:</strong> {directExecutionResult.workflow_type}
+                  </div>
+                )}
+                <div className="mb-2">
+                  <strong>Executed At:</strong> {new Date(directExecutionResult.executed_at).toLocaleString()}
+                </div>
+                <div>
+                  <strong>Result:</strong>
+                  <pre className="mt-2 bg-white p-3 rounded text-sm overflow-x-auto">
+                    <code>{JSON.stringify(directExecutionResult.result, null, 2)}</code>
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 } 
