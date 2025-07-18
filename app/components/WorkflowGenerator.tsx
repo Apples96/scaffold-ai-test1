@@ -131,8 +131,8 @@ export default function WorkflowGenerator() {
     setDirectExecutionResult(null);
 
     try {
-      // Extract workflow parameters from the generated code
-      const codeMatch = result.executable_code.match(/JSON\.stringify\(\s*\{[^}]*workflow_type:\s*['"`]([^'"`]+)['"`][^}]*parameters:\s*JSON\.stringify\(\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})\s*\)[^}]*\}\s*\)/);
+      // Simplified regex to extract workflow parameters from the generated code
+      const codeMatch = result.executable_code.match(/workflow_type:\s*['"`]([^'"`]+)['"`][^}]*parameters:\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})/);
       
       if (!codeMatch) {
         throw new Error("Could not extract workflow parameters from generated code");
@@ -193,7 +193,7 @@ export default function WorkflowGenerator() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g., Search for customer feedback, analyze sentiment, and generate a prioritized action plan"
-              className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             />
           </div>
           <button
@@ -217,7 +217,7 @@ export default function WorkflowGenerator() {
           {/* Executable Code */}
           <div className="mb-6">
             <h4 className="text-lg font-semibold mb-2 text-gray-700">Executable Code</h4>
-            <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
+            <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto text-sm text-gray-900">
               <code>{result.executable_code}</code>
             </pre>
           </div>
@@ -225,7 +225,7 @@ export default function WorkflowGenerator() {
           {/* Tool Configuration */}
           <div className="mb-6">
             <h4 className="text-lg font-semibold mb-2 text-gray-700">Tool Configuration</h4>
-            <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto text-sm">
+            <pre className="bg-gray-100 p-4 rounded-md overflow-x-auto text-sm text-gray-900">
               <code>{JSON.stringify(result.tool_config, null, 2)}</code>
             </pre>
           </div>
@@ -271,7 +271,7 @@ export default function WorkflowGenerator() {
                 value={directExecutionInput}
                 onChange={(e) => setDirectExecutionInput(e.target.value)}
                 placeholder="Enter your query or input"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
               />
             </div>
             <button
@@ -304,7 +304,7 @@ export default function WorkflowGenerator() {
                 </div>
                 <div>
                   <strong>Result:</strong>
-                  <pre className="mt-2 bg-white p-3 rounded text-sm overflow-x-auto">
+                  <pre className="mt-2 bg-white p-3 rounded text-sm overflow-x-auto text-gray-900">
                     <code>{JSON.stringify(directExecutionResult.result, null, 2)}</code>
                   </pre>
                 </div>
