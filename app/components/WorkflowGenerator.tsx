@@ -131,37 +131,50 @@ export default function WorkflowGenerator() {
     setDirectExecutionResult(null);
 
     try {
-      // Simplified regex to extract workflow parameters from the generated code
-      const codeMatch = result.executable_code.match(/workflow_type:\s*['"`]([^'"`]+)['"`][^}]*parameters:\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})/);
-      
-      if (!codeMatch) {
+      // Extract workflow type and parameters using a more robust approach
+      const workflowTypeMatch = result.executable_code.match(/workflow_type:\s*['"`]([^'"`]+)['"`]/);
+      if (!workflowTypeMatch) {
+        throw new Error("Could not extract workflow type from generated code");
+      }
+      const workflowType = workflowTypeMatch[1];
+
+      // Extract the parameters object more carefully
+      const parametersMatch = result.executable_code.match(/parameters:\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})/);
+      if (!parametersMatch) {
         throw new Error("Could not extract workflow parameters from generated code");
       }
 
-      const workflowType = codeMatch[1];
-      let parameters;
+      let parametersString = parametersMatch[1];
       
-      try {
-        // Clean up the parameters string to make it valid JSON
-        let cleanParams = codeMatch[2]
-          .replace(/(\w+):/g, '"$1":') // Add quotes to property names
-          .replace(/'/g, '"') // Replace single quotes with double quotes
-          .replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
-        
-        parameters = JSON.parse(cleanParams);
-      } catch (parseError) {
-        throw new Error(`Failed to parse workflow parameters: ${parseError}`);
-      }
+      // Replace JavaScript variables with actual values
+      parametersString = parametersString
+        .replace(/userInput/g, `"${directExecutionInput}"`)
+        .replace(/\$\{process\.env\.API_KEY\}/g, '"API_KEY"')
+        .replace(/\$\{([^}]+)\}/g, '"$1"') // Replace template literals with quoted strings
+        .replace(/(\w+):/g, '"$1":') // Add quotes to property names
+        .replace(/'/g, '"') // Replace single quotes with double quotes
+        .replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
 
-      // Update parameters with user input
-      if (parameters.search_query) {
-        parameters.search_query = directExecutionInput;
-      }
-      if (parameters.query) {
-        parameters.query = directExecutionInput;
-      }
-      if (parameters.user_input) {
-        parameters.user_input = directExecutionInput;
+      let parameters;
+      try {
+        parameters = JSON.parse(parametersString);
+      } catch (parseError) {
+        // If JSON parsing fails, try to create a simple workflow structure
+        console.warn('Failed to parse complex parameters, creating simple workflow:', parseError);
+        
+        // Create a simple document search workflow as fallback
+        parameters = {
+          steps: [
+            {
+              type: 'document_search',
+              name: 'search_step',
+              parameters: {
+                query: directExecutionInput,
+                company_scope: true
+              }
+            }
+          ]
+        };
       }
 
       // Execute the workflow
