@@ -1,6 +1,6 @@
-# Scaffold.ai Landing Page
+# LightOn scaffold.ai Landing Page
 
-A modern, responsive landing page for Scaffold.ai - an AI-powered process automation platform that transforms step-by-step workflow descriptions into reliable automation scaffolding.
+A modern, responsive landing page for LightOn scaffold.ai - an AI-powered process automation platform that transforms step-by-step workflow descriptions into reliable automation scaffolding.
 
 ## Features
 
@@ -211,4 +211,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-Built with ❤️ for Scaffold.ai 
+Built with ❤️ for LightOn scaffold.ai 

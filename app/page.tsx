@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Zap, Shield, Clock, BarChart3, Users, CheckCircle, ChevronRight } from 'lucide-react'
 import EmailSignup from './components/EmailSignup'
 import WorkflowGenerator from './components/WorkflowGenerator'
+import LightOnLogo from './components/LightOnLogo'
 
 export default function Home() {
   const scrollToWorkflowGenerator = () => {
@@ -22,8 +23,9 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
         <div className="container-max px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gradient">Scaffold.ai</h1>
+            <div className="flex items-center space-x-2">
+              <LightOnLogo size={32} />
+              <h1 className="text-xl font-bold text-gradient">LightOn scaffold.ai</h1>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-white/70 hover:text-white transition-colors">Features</a>
@@ -143,7 +145,7 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Why Choose <span className="text-gradient">Scaffold.ai</span>?
+              Why Choose <span className="text-gradient">LightOn scaffold.ai</span>?
             </h2>
             <p className="text-xl text-white/70 max-w-3xl mx-auto">
               Our AI-powered platform transforms your process descriptions into reliable, scalable automation.
@@ -329,8 +331,9 @@ export default function Home() {
       <footer className="border-t border-white/10 py-12">
         <div className="container-max">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-4 md:mb-0">
-              <h3 className="text-xl font-bold text-gradient">Scaffold.ai</h3>
+            <div className="flex items-center space-x-2 mb-4 md:mb-0">
+              <LightOnLogo size={28} />
+              <h3 className="text-xl font-bold text-gradient">LightOn scaffold.ai</h3>
             </div>
             <div className="flex space-x-8 text-sm text-white/70">
               <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -339,7 +342,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-white/10 text-center text-sm text-white/50">
-            © 2024 Scaffold.ai. All rights reserved.
+            © 2024 LightOn scaffold.ai. All rights reserved.
           </div>
         </div>
       </footer>

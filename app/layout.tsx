@@ -5,12 +5,12 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Scaffold.ai - AI-Powered Process Automation',
+  title: 'LightOn scaffold.ai - AI-Powered Process Automation',
   description: 'Transform your step-by-step processes into reliable AI automation. Describe your workflow and let our AI build the scaffolding for you.',
   keywords: 'AI automation, process automation, workflow automation, AI scaffolding, business automation',
   metadataBase: new URL('https://scaffold-ai-test1.vercel.app'),
   openGraph: {
-    title: 'Scaffold.ai - AI-Powered Process Automation',
+    title: 'LightOn scaffold.ai - AI-Powered Process Automation',
     description: 'Transform your step-by-step processes into reliable AI automation.',
     type: 'website',
   },
