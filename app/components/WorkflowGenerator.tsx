@@ -174,6 +174,9 @@ export default function WorkflowGenerator() {
       console.log('API Response:', data);
       
       if (!response.ok) {
+        if (data.error === 'Paradigm API key not configured') {
+          throw new Error("Paradigm API key not configured. Please set the PARADIGM_API_KEY environment variable to test workflows.");
+        }
         throw new Error(data.error || "Failed to execute workflow");
       }
       
@@ -392,7 +395,7 @@ export default function WorkflowGenerator() {
               <Sparkles className="h-5 w-5 text-blue-400" />
               Demo: Test Your Workflow
             </h3>
-            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the workflow generator. This demo automatically generates a multi-sentence document search workflow and executes it with your input.</p>
+            <p className="text-white/70 mb-4 text-sm">Enter a question below to test the workflow generator. This demo automatically generates a multi-sentence document search workflow and executes it with your input. <strong>Note: Requires a configured Paradigm API key.</strong></p>
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <input
                 type="text"

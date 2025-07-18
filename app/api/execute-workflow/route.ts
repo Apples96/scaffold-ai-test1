@@ -18,61 +18,14 @@ export async function POST(req: NextRequest) {
     const PARADIGM_API_KEY = process.env.PARADIGM_API_KEY;
     const PARADIGM_BASE_URL = 'https://paradigm.lighton.ai/api/v2';
     
-    // Only use demo mode if no API key is configured
+    // Check if API key is configured
     if (!PARADIGM_API_KEY) {
-      console.log('No Paradigm API key found, using demo mode');
-      
-      // Return demo responses for different workflow types
-      if (workflow_type === 'document_search') {
-        const demoResponse = {
-          success: true,
-          result: {
-            content: `**Demo Response for: "${parsedParameters.query}"**\n\nThis is a demo response showing how the workflow would work. In a real implementation, this would search through your documents using the Paradigm API.\n\n**Example Answer:**\nBased on the available documents, here's what I found about your query: "${parsedParameters.query}"\n\n*This is a simulated response for demonstration purposes.*`,
-            answer: `Demo response for: ${parsedParameters.query}`,
-            chat_session_id: 12345
-          },
-          workflow_type: 'document_search',
-          explanation: 'Demo mode - no actual API calls made',
-          executed_at: new Date().toISOString()
-        };
-        return NextResponse.json(demoResponse);
-      } else if (workflow_type === 'multi_step_workflow') {
-        const demoResponse = {
-          success: true,
-          result: {
-            workflow_results: [
-              {
-                step: 'docsearch',
-                result: {
-                  content: `**Document Search Results for: "${parsedParameters.steps?.[0]?.query || 'your query'}"**\n\nFound relevant documents and information.`,
-                  answer: `Document search completed for: ${parsedParameters.steps?.[0]?.query || 'your query'}`,
-                  chat_session_id: 12345
-                },
-                timestamp: new Date().toISOString()
-              }
-            ],
-            final_context: {}
-          },
-          workflow_type: 'multi_step_workflow',
-          explanation: 'Demo mode - simulated multi-step workflow',
-          executed_at: new Date().toISOString()
-        };
-        return NextResponse.json(demoResponse);
-      } else {
-        // Generic demo response for other workflow types
-        const demoResponse = {
-          success: true,
-          result: {
-            content: `**Demo Response for ${workflow_type}**\n\nThis is a demo response showing how the ${workflow_type} workflow would work. In a real implementation, this would execute using the Paradigm API.\n\n*This is a simulated response for demonstration purposes.*`,
-            answer: `Demo response for ${workflow_type}`,
-            workflow_type: workflow_type
-          },
-          workflow_type: workflow_type,
-          explanation: 'Demo mode - no actual API calls made',
-          executed_at: new Date().toISOString()
-        };
-        return NextResponse.json(demoResponse);
-      }
+      console.log('No Paradigm API key found, returning error');
+      return NextResponse.json({ 
+        error: 'Paradigm API key not configured',
+        details: 'Please set the PARADIGM_API_KEY environment variable to use this workflow execution service.',
+        status: 500
+      }, { status: 500 });
     }
     
     console.log('Paradigm API key found, making real API calls');
