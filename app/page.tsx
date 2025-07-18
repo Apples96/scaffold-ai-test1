@@ -25,7 +25,7 @@ export default function Home() {
           <div className="flex items-center justify-between h-32">
             <div className="flex items-center space-x-6">
               <LightOnLogoSimple size={120} />
-              <h1 className="text-3xl font-bold text-white tracking-wide">LightOn scaffold.ai</h1>
+              <h1 className="text-2xl font-bold text-white tracking-wide">scaffold.ai</h1>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-white/70 hover:text-white transition-colors">Features</a>
@@ -334,7 +334,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-6 mb-4 md:mb-0">
               <LightOnLogoSimple size={100} />
-              <h3 className="text-2xl font-bold text-white tracking-wide">LightOn scaffold.ai</h3>
+              <h3 className="text-xl font-bold text-white tracking-wide">scaffold.ai</h3>
             </div>
             <div className="flex space-x-8 text-sm text-white/70">
               <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -343,7 +343,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-white/10 text-center text-sm text-white/50">
-            © 2024 LightOn scaffold.ai. All rights reserved.
+            © 2024 scaffold.ai. All rights reserved.
           </div>
         </div>
       </footer>
