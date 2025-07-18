@@ -49,6 +49,7 @@ export default function Home() {
               <span className="text-gradient block">Processes into AI</span>
               Automation
             </h1>
+            {/* Hero description */}
             <p className="text-xl md:text-2xl text-white/70 mb-10 max-w-4xl mx-auto leading-relaxed">
               Describe your step-by-step workflow and let our AI build the scaffolding for reliable, automated execution.
             </p>
