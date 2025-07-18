@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, Zap, Shield, Clock, BarChart3, Users, CheckCircle, ChevronRight } from 'lucide-react'
 import EmailSignup from './components/EmailSignup'
 import WorkflowGenerator from './components/WorkflowGenerator'
-import LightOnLogo from './components/LightOnLogo'
+import LightOnLogoImage from './components/LightOnLogoImage'
 
 export default function Home() {
   const scrollToWorkflowGenerator = () => {
@@ -24,7 +24,7 @@ export default function Home() {
         <div className="container-max px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-2">
-              <LightOnLogo size={32} />
+              <LightOnLogoImage size={32} />
               <h1 className="text-xl font-bold text-gradient">LightOn scaffold.ai</h1>
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -333,7 +333,7 @@ export default function Home() {
         <div className="container-max">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <LightOnLogo size={28} />
+              <LightOnLogoImage size={28} />
               <h3 className="text-xl font-bold text-gradient">LightOn scaffold.ai</h3>
             </div>
             <div className="flex space-x-8 text-sm text-white/70">
