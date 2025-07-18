@@ -10,7 +10,7 @@ interface LightOnLogoImageProps {
 const LightOnLogoImage: React.FC<LightOnLogoImageProps> = ({ 
   size = 32, 
   className = '',
-  src = '/black_no_background (3).png' // LightOn logo file
+  src = '/lighton-logo.png' // LightOn logo file
 }) => {
   return (
     <div className={`relative ${className}`} style={{ width: size, height: size }}>
