@@ -10,6 +10,10 @@ A modern, responsive landing page for scaffold.ai - an AI-powered process automa
 - 🔥 **Firebase Integration**: Email collection with Firestore database
 - 🎭 **Smooth Animations**: Framer Motion animations for enhanced UX
 - 🎯 **SEO Optimized**: Meta tags and structured content for better search visibility
+- 🤖 **AI Workflow Generation**: Generate executable workflows using OpenAI GPT-4
+- ⚙️ **Direct Workflow Execution**: Test generated workflows directly in the browser
+- 📝 **Workflow Description**: Get human-readable descriptions of generated workflows
+- 🔗 **Paradigm Integration**: Seamless integration with Paradigm's API for document processing
 
 ## Tech Stack
 
@@ -27,6 +31,8 @@ A modern, responsive landing page for scaffold.ai - an AI-powered process automa
 - Node.js 18+ 
 - npm or yarn
 - Firebase account
+- OpenAI API key (for workflow generation)
+- Paradigm API key (for workflow execution)
 
 ### Installation
 
@@ -67,14 +73,21 @@ A modern, responsive landing page for scaffold.ai - an AI-powered process automa
    cp env.example .env.local
    ```
    
-   Edit `.env.local` and add your Firebase configuration:
+   Edit `.env.local` and add your configuration:
    ```env
+   # Firebase Configuration
    FIREBASE_API_KEY=your_actual_api_key
    FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
    FIREBASE_PROJECT_ID=your_project_id
    FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
    FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
    FIREBASE_APP_ID=your_app_id
+   
+   # OpenAI API Key (for workflow generation)
+   OPENAI_API_KEY=your_openai_api_key
+   
+   # Paradigm API Key (for workflow execution)
+   PARADIGM_API_KEY=your_paradigm_api_key
    ```
 
 5. **Run the development server**
@@ -91,10 +104,22 @@ A modern, responsive landing page for scaffold.ai - an AI-powered process automa
 scaffold-ai-landing/
 ├── app/
 │   ├── api/
+│   │   ├── execute-workflow/
+│   │   │   └── route.ts          # Workflow execution API
+│   │   ├── generate-workflow/
+│   │   │   └── route.ts          # Workflow generation API
+│   │   ├── generate-workflow-description/
+│   │   │   └── route.ts          # Workflow description API
 │   │   └── subscribe/
 │   │       └── route.ts          # Email subscription API
 │   ├── components/
-│   │   └── EmailSignup.tsx       # Email signup component
+│   │   ├── EmailSignup.tsx       # Email signup component
+│   │   └── WorkflowGenerator.tsx # Workflow generation component
+│   ├── utils/
+│   │   ├── multiSentenceWorkflow.ts # Multi-sentence workflow logic
+│   │   ├── templateBasedGenerator.ts # Template-based generation
+│   │   ├── workflowParser.ts     # Workflow code parsing utilities
+│   │   └── workflowTemplates.ts  # Workflow templates
 │   ├── globals.css               # Global styles
 │   ├── layout.tsx                # Root layout
 │   └── page.tsx                  # Main landing page
@@ -105,6 +130,45 @@ scaffold-ai-landing/
 ├── tailwind.config.js           # Tailwind configuration
 └── tsconfig.json                # TypeScript configuration
 ```
+
+## Workflow Features
+
+### AI Workflow Generation
+
+The app can generate executable workflows from natural language descriptions using OpenAI GPT-4:
+
+1. **Describe your workflow** in natural language
+2. **Generate executable code** that calls the Paradigm API
+3. **Get Paradigm tool configuration** for integration
+4. **View workflow description** in human-readable format
+
+### Direct Workflow Execution
+
+Test generated workflows directly in the browser:
+
+1. **Parse workflow code** automatically to extract parameters
+2. **Provide input** for the workflow (queries, questions, etc.)
+3. **Execute workflow** using the `/api/execute-workflow` endpoint
+4. **View results** with step-by-step execution details
+
+### Supported Workflow Types
+
+- **Document Search**: Search through documents with queries
+- **Document Analysis**: Analyze specific documents
+- **Image Analysis**: Analyze images in documents
+- **Query**: Retrieve document chunks based on queries
+- **Chat Completion**: Generate responses using chat models
+- **Multi-Sentence Workflow**: Process input sentence by sentence
+- **Multi-Step Workflow**: Execute multiple steps sequentially
+
+### Workflow Code Parsing
+
+The app includes a robust parser that can extract workflow parameters from generated code:
+
+- **JSON.stringify patterns**: Extracts parameters from JSON.stringify calls
+- **Object literal patterns**: Parses object literals with workflow configuration
+- **Function parameter patterns**: Handles function calls with parameters
+- **Variable substitution**: Replaces variable references with user input
 
 ## Customization
 
@@ -150,12 +214,19 @@ The design uses a custom color palette defined in `tailwind.config.js`:
 Add these environment variables in your Vercel project settings:
 
 ```
+# Firebase Configuration
 FIREBASE_API_KEY=your_firebase_api_key
 FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
 FIREBASE_PROJECT_ID=your_project_id
 FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
 FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
 FIREBASE_APP_ID=your_app_id
+
+# OpenAI API Key (for workflow generation)
+OPENAI_API_KEY=your_openai_api_key
+
+# Paradigm API Key (for workflow execution)
+PARADIGM_API_KEY=your_paradigm_api_key
 ```
 
 ### Other Deployment Options

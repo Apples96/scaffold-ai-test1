@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useRef } from "react";
-import { Copy, Check, Sparkles, Code, Settings } from "lucide-react";
+import { Copy, Check, Sparkles, Code, Settings, Play, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from 'react-markdown';
+import { parseWorkflowCode, executeWorkflowDirectly, validateWorkflowCode } from '../utils/workflowParser';
 
 const PLACEHOLDER = `Describe the input (user action and any provided data, such as prompts or documents). Specify the expected output (AI system response, including any artifacts like reports or actions in external tools). Clearly outline each intermediate step, detailing the inputs, outputs, and any additional tools, documents, or data sources involved.`;
 
@@ -22,6 +23,23 @@ export default function WorkflowGenerator() {
   const [workflowDescription, setWorkflowDescription] = useState<string>("");
   const [workflowDescriptionLoading, setWorkflowDescriptionLoading] = useState(false);
 
+  // Direct execution functionality
+  const [directExecutionInput, setDirectExecutionInput] = useState("");
+  const [directExecutionLoading, setDirectExecutionLoading] = useState(false);
+  const [directExecutionResult, setDirectExecutionResult] = useState<any>(null);
+  const [directExecutionError, setDirectExecutionError] = useState("");
+  const [parsedWorkflow, setParsedWorkflow] = useState<any>(null);
+
+  // Auto-parse workflow when executable code changes
+  const parseWorkflowOnChange = (code: string) => {
+    if (code.trim()) {
+      const parsed = parseWorkflowCode(code);
+      setParsedWorkflow(parsed);
+    } else {
+      setParsedWorkflow(null);
+    }
+  };
+
   // Demo workflow - will be generated dynamically
   const [demoWorkflow, setDemoWorkflow] = useState<any>(null);
   const [demoWorkflowLoading, setDemoWorkflowLoading] = useState(false);
@@ -37,6 +55,10 @@ export default function WorkflowGenerator() {
     setExecutableCode("");
     setToolConfig("");
     setWorkflowDescription("");
+    setDirectExecutionInput("");
+    setDirectExecutionResult(null);
+    setDirectExecutionError("");
+    setParsedWorkflow(null);
 
     try {
       const response = await fetch("/api/generate-workflow", {
@@ -57,6 +79,8 @@ export default function WorkflowGenerator() {
         setExecutableCode(data.executable_code);
         // Generate workflow description from the executable code
         generateWorkflowDescription(data.executable_code);
+        // Parse the workflow for direct execution
+        parseWorkflowOnChange(data.executable_code);
         // Ensure tool_config is properly formatted as JSON string
         setToolConfig(typeof data.tool_config === 'string' 
           ? data.tool_config 
@@ -65,6 +89,8 @@ export default function WorkflowGenerator() {
       } else if (data.raw_response) {
         setExecutableCode(data.raw_response);
         generateWorkflowDescription(data.raw_response);
+        // Parse the workflow for direct execution
+        parseWorkflowOnChange(data.raw_response);
         setToolConfig("See executable code for complete configuration");
       } else {
         throw new Error("Invalid response format");
@@ -116,6 +142,71 @@ export default function WorkflowGenerator() {
       console.error('Error generating workflow description:', err);
     } finally {
       setWorkflowDescriptionLoading(false);
+    }
+  };
+
+  const handleDirectExecution = async () => {
+    if (!executableCode.trim()) {
+      setDirectExecutionError("No workflow code available to execute");
+      return;
+    }
+
+    if (!directExecutionInput.trim()) {
+      setDirectExecutionError("Please provide input for the workflow");
+      return;
+    }
+
+    setDirectExecutionLoading(true);
+    setDirectExecutionError("");
+    setDirectExecutionResult(null);
+
+    try {
+      // Parse the workflow code
+      const parsed = parseWorkflowCode(executableCode);
+      setParsedWorkflow(parsed);
+
+      if (!parsed.isValid) {
+        throw new Error(`Invalid workflow: ${parsed.error}`);
+      }
+
+      // Validate the workflow
+      const validation = validateWorkflowCode(executableCode);
+      if (!validation.isValid) {
+        throw new Error(validation.error || "Workflow validation failed");
+      }
+
+      // Update parameters with user input if needed
+      let executionParameters = { ...parsed.parameters };
+      
+      // For multi-sentence workflows, update the user_input
+      if (parsed.workflow_type === 'multi_sentence_workflow') {
+        executionParameters.user_input = directExecutionInput;
+      }
+      
+      // For document search workflows, update the query
+      if (parsed.workflow_type === 'document_search') {
+        executionParameters.query = directExecutionInput;
+      }
+
+      // For chat completion workflows, update the messages
+      if (parsed.workflow_type === 'chat_completion' && executionParameters.messages) {
+        // Add user message to the messages array
+        const userMessage = { role: 'user', content: directExecutionInput };
+        executionParameters.messages = [...executionParameters.messages, userMessage];
+      }
+
+      // Execute the workflow
+      const result = await executeWorkflowDirectly({
+        ...parsed,
+        parameters: executionParameters
+      });
+
+      setDirectExecutionResult(result);
+    } catch (err) {
+      console.error('Direct execution error:', err);
+      setDirectExecutionError(err instanceof Error ? err.message : "An error occurred during execution");
+    } finally {
+      setDirectExecutionLoading(false);
     }
   };
 
@@ -296,11 +387,15 @@ export default function WorkflowGenerator() {
                   <div className="flex items-center gap-2 mb-3">
                     <Code className="h-5 w-5 text-blue-400" />
                     <h3 className="text-lg font-semibold text-white">Executable Code</h3>
+                    <span className="text-xs text-white/50 ml-2">(Editable - changes will update workflow parsing)</span>
                   </div>
                   <div className="relative">
                     <textarea
                       value={executableCode}
-                      readOnly
+                      onChange={(e) => {
+                        setExecutableCode(e.target.value);
+                        parseWorkflowOnChange(e.target.value);
+                      }}
                       className="w-full h-64 px-4 py-3 bg-gray-800/50 border border-white/10 rounded-lg text-white font-mono text-sm resize-none"
                     />
                     <button
@@ -345,6 +440,128 @@ export default function WorkflowGenerator() {
                       <span>Generating workflow description...</span>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Direct Execution Section */}
+              {executableCode && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Play className="h-5 w-5 text-orange-400" />
+                    <h3 className="text-lg font-semibold text-white">Execute Workflow Directly</h3>
+                  </div>
+                  
+                  {/* Workflow Validation Status */}
+                  {parsedWorkflow && (
+                    <div className="mb-4 p-3 rounded-lg border">
+                      {parsedWorkflow.isValid ? (
+                        <div className="flex items-center gap-2 text-green-400">
+                          <Check className="h-4 w-4" />
+                          <span className="text-sm">
+                            Workflow Type: <code className="bg-gray-700 px-1 rounded">{parsedWorkflow.workflow_type}</code>
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-red-400">
+                          <AlertCircle className="h-4 w-4" />
+                          <span className="text-sm">Invalid workflow: {parsedWorkflow.error}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Execution Input */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-white/80 mb-2">
+                      Input for Workflow
+                    </label>
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={directExecutionInput}
+                        onChange={(e) => setDirectExecutionInput(e.target.value)}
+                        placeholder="Enter input for the workflow (e.g., query, question, etc.)"
+                        className="flex-1 px-4 py-2 bg-gray-800/50 border border-white/10 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleDirectExecution(); }}
+                        disabled={directExecutionLoading}
+                      />
+                      <button
+                        onClick={handleDirectExecution}
+                        disabled={directExecutionLoading || !parsedWorkflow?.isValid}
+                        className="btn-primary px-6 py-2 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {directExecutionLoading ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        ) : (
+                          <Play className="h-5 w-5" />
+                        )}
+                        Execute
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Execution Error */}
+                  {directExecutionError && (
+                    <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <p className="text-red-400 text-sm">{directExecutionError}</p>
+                    </div>
+                  )}
+
+                  {/* Execution Result */}
+                  {directExecutionResult && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-white/80 mb-2">
+                        Execution Result
+                      </label>
+                      <div className="bg-gray-800/50 border border-white/10 rounded-lg p-4">
+                        <div className="text-white/90 text-sm">
+                          <div className="mb-2">
+                            <strong>Status:</strong> {directExecutionResult.success ? 'Success' : 'Failed'}
+                          </div>
+                          {directExecutionResult.workflow_type && (
+                            <div className="mb-2">
+                              <strong>Workflow Type:</strong> {directExecutionResult.workflow_type}
+                            </div>
+                          )}
+                          {directExecutionResult.explanation && (
+                            <div className="mb-2">
+                              <strong>Explanation:</strong> {directExecutionResult.explanation}
+                            </div>
+                          )}
+                          {directExecutionResult.result && (
+                            <div>
+                              <strong>Result:</strong>
+                              <div className="mt-2 p-3 bg-gray-900/50 rounded border border-white/5">
+                                {directExecutionResult.workflow_type === 'multi_step_workflow' && directExecutionResult.result.workflow_results ? (
+                                  <div className="space-y-3">
+                                    {directExecutionResult.result.workflow_results.map((step: any, index: number) => (
+                                      <div key={index} className="border-l-2 border-blue-500 pl-3">
+                                        <div className="font-semibold text-blue-400">Step {index + 1}: {step.step}</div>
+                                        {step.explanation && (
+                                          <div className="text-yellow-400 text-xs mt-1">{step.explanation}</div>
+                                        )}
+                                        {step.result && (
+                                          <div className="text-white/80 text-sm mt-1">
+                                            {typeof step.result === 'string' ? step.result : JSON.stringify(step.result, null, 2)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : directExecutionResult.workflow_type === 'multi_sentence_workflow' && directExecutionResult.result.final_answer ? (
+                                  <div className="text-white/90 whitespace-pre-line">
+                                    {directExecutionResult.result.final_answer}
+                                  </div>
+                                ) : (
+                                  <ReactMarkdown>{JSON.stringify(directExecutionResult.result, null, 2)}</ReactMarkdown>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
