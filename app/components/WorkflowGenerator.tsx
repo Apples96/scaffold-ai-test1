@@ -19,6 +19,8 @@ export default function WorkflowGenerator() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState("");
   const [chatResponse, setChatResponse] = useState<string | null>(null);
+  const [workflowDescription, setWorkflowDescription] = useState<string>("");
+  const [workflowDescriptionLoading, setWorkflowDescriptionLoading] = useState(false);
 
   // Demo workflow - will be generated dynamically
   const [demoWorkflow, setDemoWorkflow] = useState<any>(null);
@@ -34,6 +36,7 @@ export default function WorkflowGenerator() {
     setError("");
     setExecutableCode("");
     setToolConfig("");
+    setWorkflowDescription("");
 
     try {
       const response = await fetch("/api/generate-workflow", {
@@ -52,6 +55,8 @@ export default function WorkflowGenerator() {
 
       if (data.executable_code && data.tool_config) {
         setExecutableCode(data.executable_code);
+        // Generate workflow description from the executable code
+        generateWorkflowDescription(data.executable_code);
         // Ensure tool_config is properly formatted as JSON string
         setToolConfig(typeof data.tool_config === 'string' 
           ? data.tool_config 
@@ -59,6 +64,7 @@ export default function WorkflowGenerator() {
         );
       } else if (data.raw_response) {
         setExecutableCode(data.raw_response);
+        generateWorkflowDescription(data.raw_response);
         setToolConfig("See executable code for complete configuration");
       } else {
         throw new Error("Invalid response format");
@@ -82,6 +88,34 @@ export default function WorkflowGenerator() {
       }
     } catch (err) {
       console.error("Failed to copy:", err);
+    }
+  };
+
+  const generateWorkflowDescription = async (code: string) => {
+    if (!code.trim()) return;
+    
+    setWorkflowDescriptionLoading(true);
+    try {
+      const response = await fetch("/api/generate-workflow-description", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ executableCode: code }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Failed to generate workflow description:', data.error);
+        return;
+      }
+
+      setWorkflowDescription(data.workflow_description);
+    } catch (err) {
+      console.error('Error generating workflow description:', err);
+    } finally {
+      setWorkflowDescriptionLoading(false);
     }
   };
 
@@ -276,6 +310,37 @@ export default function WorkflowGenerator() {
                         <Copy className="h-4 w-4 text-white/70" />
                       )}
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Workflow Description */}
+              {workflowDescription && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-5 w-5 text-green-400" />
+                    <h3 className="text-lg font-semibold text-white">Workflow Description</h3>
+                  </div>
+                  <div className="bg-gray-800/50 border border-white/10 rounded-lg p-4">
+                    <div className="text-white/90 text-sm leading-relaxed whitespace-pre-line">
+                      {workflowDescription}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show loading indicator while generating description */}
+              {workflowDescriptionLoading && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-5 w-5 text-green-400" />
+                    <h3 className="text-lg font-semibold text-white">Workflow Description</h3>
+                  </div>
+                  <div className="bg-gray-800/50 border border-white/10 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-white/70">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-400"></div>
+                      <span>Generating workflow description...</span>
+                    </div>
                   </div>
                 </div>
               )}
