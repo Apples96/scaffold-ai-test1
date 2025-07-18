@@ -20,7 +20,8 @@ const LightOnLogoSimple: React.FC<LightOnLogoSimpleProps> = ({
         style={{ 
           width: size, 
           height: size,
-          border: '2px solid red' // Debug border to see if image loads
+          border: '3px solid red', // Debug border to see if image loads
+          backgroundColor: 'rgba(255, 0, 0, 0.1)' // Light red background to see the area
         }}
         onLoad={() => {
           console.log('✅ LightOn logo loaded successfully');
@@ -35,7 +36,7 @@ const LightOnLogoSimple: React.FC<LightOnLogoSimpleProps> = ({
           const fallback = document.createElement('div');
           fallback.style.width = `${size}px`;
           fallback.style.height = `${size}px`;
-          fallback.style.backgroundColor = '#00D4FF';
+          fallback.style.backgroundColor = '#FFFFFF';
           fallback.style.borderRadius = '50%';
           fallback.style.display = 'flex';
           fallback.style.alignItems = 'center';
