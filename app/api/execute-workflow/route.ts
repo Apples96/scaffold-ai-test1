@@ -131,51 +131,51 @@ async function executeStep(step: any, apiKey: string, baseUrl: string, context: 
     case 'document_search':
     case 'docsearch':
       return await executeDocumentSearch({
-        query: step.query,
-        model: step.model || 'alfred-4.2',
-        workspace_ids: step.workspace_ids,
-        file_ids: step.file_ids,
-        chat_session_id: step.chat_session_id,
-        company_scope: step.company_scope,
-        private_scope: step.private_scope,
-        tool: step.tool || 'DocumentSearch',
-        private: step.private
+        query: step.parameters?.query || step.query,
+        model: step.parameters?.model || step.model || 'alfred-4.2',
+        workspace_ids: step.parameters?.workspace_ids || step.workspace_ids,
+        file_ids: step.parameters?.file_ids || step.file_ids,
+        chat_session_id: step.parameters?.chat_session_id || step.chat_session_id,
+        company_scope: step.parameters?.company_scope !== undefined ? step.parameters.company_scope : step.company_scope,
+        private_scope: step.parameters?.private_scope !== undefined ? step.parameters.private_scope : step.private_scope,
+        tool: step.parameters?.tool || step.tool || 'DocumentSearch',
+        private: step.parameters?.private !== undefined ? step.parameters.private : step.private
       }, apiKey, baseUrl);
       
     case 'document_analysis':
     case 'docanalysis':
       return await executeDocumentAnalysis({
-        query: step.query,
-        document_ids: step.document_ids,
-        model: step.model || 'alfred-4.2',
-        private: step.private
+        query: step.parameters?.query || step.query,
+        document_ids: step.parameters?.document_ids || step.document_ids,
+        model: step.parameters?.model || step.model || 'alfred-4.2',
+        private: step.parameters?.private !== undefined ? step.parameters.private : step.private
       }, apiKey, baseUrl);
       
     case 'image_analysis':
     case 'imageanalysis':
       return await executeImageAnalysis({
-        query: step.query,
-        document_ids: step.document_ids,
-        model: step.model || 'alfred-4.2',
-        private: step.private
+        query: step.parameters?.query || step.query,
+        document_ids: step.parameters?.document_ids || step.document_ids,
+        model: step.parameters?.model || step.model || 'alfred-4.2',
+        private: step.parameters?.private !== undefined ? step.parameters.private : step.private
       }, apiKey, baseUrl);
       
     case 'query':
     case 'search':
       return await executeQuery({
-        query: step.query,
-        collection: step.collection,
-        n: step.n
+        query: step.parameters?.query || step.query,
+        collection: step.parameters?.collection || step.collection,
+        n: step.parameters?.n || step.n
       }, apiKey, baseUrl);
       
     case 'chat':
     case 'chat_completion':
     case 'completion':
       return await executeChatCompletion({
-        model: step.model || 'alfred-4.2',
-        messages: step.messages,
-        temperature: step.temperature,
-        max_tokens: step.max_tokens
+        model: step.parameters?.model || step.model || 'alfred-4.2',
+        messages: step.parameters?.messages || step.messages,
+        temperature: step.parameters?.temperature || step.temperature,
+        max_tokens: step.parameters?.max_tokens || step.max_tokens
       }, apiKey, baseUrl);
       
     default:
@@ -184,27 +184,45 @@ async function executeStep(step: any, apiKey: string, baseUrl: string, context: 
 }
 
 async function executeDocumentSearch(parameters: any, apiKey: string, baseUrl: string) {
+  // Validate required parameters
+  if (!parameters.query) {
+    throw new Error('Document search requires a query parameter');
+  }
+
+  // Build request body with only defined parameters
+  const requestBody: any = {
+    query: parameters.query
+  };
+
+  // Add optional parameters only if they are defined
+  if (parameters.model) requestBody.model = parameters.model;
+  if (parameters.workspace_ids) requestBody.workspace_ids = parameters.workspace_ids;
+  if (parameters.file_ids) requestBody.file_ids = parameters.file_ids;
+  if (parameters.chat_session_id) requestBody.chat_session_id = parameters.chat_session_id;
+  if (parameters.company_scope !== undefined) requestBody.company_scope = parameters.company_scope;
+  if (parameters.private_scope !== undefined) requestBody.private_scope = parameters.private_scope;
+  if (parameters.tool) requestBody.tool = parameters.tool;
+  if (parameters.private !== undefined) requestBody.private = parameters.private;
+
+  console.log('Document search request body:', JSON.stringify(requestBody, null, 2));
+
   const response = await fetch(`${baseUrl}/chat/document-search`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      query: parameters.query,
-      model: parameters.model || 'alfred-4.2',
-      workspace_ids: parameters.workspace_ids,
-      file_ids: parameters.file_ids,
-      chat_session_id: parameters.chat_session_id,
-      company_scope: parameters.company_scope,
-      private_scope: parameters.private_scope,
-      tool: parameters.tool || 'DocumentSearch',
-      private: parameters.private
-    })
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
-    throw new Error(`Document search failed: ${response.status} ${response.statusText}`);
+    const errorText = await response.text();
+    console.error('Document search API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      errorText: errorText
+    });
+    throw new Error(`Document search failed: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
   return await response.json();

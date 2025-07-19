@@ -263,6 +263,8 @@ The executable code should:
 - Return structured results
 - NOT call Paradigm APIs directly (the Vercel endpoint handles that)
 - Be flexible and adaptable to different workflow patterns
+- Generate PROPERLY FORMATTED JSON with all property names quoted
+- Use valid JavaScript object syntax that can be parsed as JSON
 
 ## WORKFLOW STRUCTURE REQUIREMENTS
 
@@ -284,6 +286,8 @@ IMPORTANT: Always use a steps array with the following structure:
 - **Reference previous steps** using "step_name.field" syntax
 - **Pass data between steps** using document_ids, content, etc.
 - **Include proper error handling** in the executable code
+- **ALWAYS quote property names** in JSON objects (e.g., "type": "document_search", not type: "document_search")
+- **Use valid JSON syntax** that can be parsed without errors
 
 ## TOOL CONFIGURATION REQUIREMENTS
 
@@ -361,6 +365,38 @@ Return ONLY a JSON object with this structure:
   }
 }
 
+## CORRECT JSON FORMAT EXAMPLE
+
+The executable code should generate parameters like this (CORRECT FORMAT):
+const parameters = {
+  "steps": [
+    {
+      "type": "document_search",
+      "name": "search_step",
+      "parameters": {
+        "query": userInput,
+        "company_scope": true,
+        "model": "alfred-4.2"
+      }
+    }
+  ]
+};
+
+NOT like this (INCORRECT FORMAT):
+const parameters = {
+  steps: [
+    {
+      type: "document_search",
+      name: "search_step",
+      parameters: {
+        query: userInput,
+        company_scope: true,
+        model: "alfred-4.2"
+      }
+    }
+  ]
+};
+
 ## IMPORTANT GUIDELINES
 
 - **NO predefined workflow types**: Create the workflow structure that best fits the user's needs
@@ -372,6 +408,8 @@ Return ONLY a JSON object with this structure:
 - **TEST THOROUGHLY**: Ensure your workflow produces the expected output before returning it
 - **Use correct step types**: Use "chat_completion" (singular), not "chat_completions" (plural)
 - **Handle API responses properly**: Extract the right fields from each API response for chaining
+- **CRITICAL: Use proper JSON syntax**: All property names must be quoted, all string values must be quoted
+- **CRITICAL: Validate JSON format**: Ensure the generated code produces valid JSON that can be parsed
 
 IMPORTANT: 
 - NO markdown formatting

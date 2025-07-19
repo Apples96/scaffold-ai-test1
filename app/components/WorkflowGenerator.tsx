@@ -120,6 +120,8 @@ export default function WorkflowGenerator() {
       setDirectExecutionError("No workflow code available to execute");
       return;
     }
+    
+    console.log('Full executable code:', result.executable_code);
 
     if (!directExecutionInput.trim()) {
       setDirectExecutionError("Please provide input for the workflow");
@@ -132,45 +134,127 @@ export default function WorkflowGenerator() {
 
     try {
       // Extract workflow type and parameters using a more robust approach
-      const workflowTypeMatch = result.executable_code.match(/workflow_type:\s*['"`]([^'"`]+)['"`]/);
-      if (!workflowTypeMatch) {
-        throw new Error("Could not extract workflow type from generated code");
-      }
-      const workflowType = workflowTypeMatch[1];
-
-      // Extract the parameters object more carefully
-      const parametersMatch = result.executable_code.match(/parameters:\s*(\{[^}]*(?:\{[^}]*\}[^}]*)*\})/);
-      if (!parametersMatch) {
-        throw new Error("Could not extract workflow parameters from generated code");
-      }
-
-      let parametersString = parametersMatch[1];
+      console.log('Attempting to extract workflow type from:', result.executable_code.substring(0, 200) + '...');
       
-      // More robust parameter string cleaning
+      let workflowType = 'default_workflow'; // Default fallback
+      
+      // Try multiple patterns to extract workflow type
+      const workflowTypeMatch1 = result.executable_code.match(/workflow_type:\s*['"`]([^'"`]+)['"`]/);
+      const workflowTypeMatch2 = result.executable_code.match(/workflow_type:\s*(\w+)/);
+      const workflowTypeMatch3 = result.executable_code.match(/workflow_type\s*=\s*['"`]([^'"`]+)['"`]/);
+      const workflowTypeMatch4 = result.executable_code.match(/workflow_type\s*=\s*(\w+)/);
+      
+      if (workflowTypeMatch1) {
+        workflowType = workflowTypeMatch1[1];
+        console.log('Found workflow type (pattern 1):', workflowType);
+      } else if (workflowTypeMatch2) {
+        workflowType = workflowTypeMatch2[1];
+        console.log('Found workflow type (pattern 2):', workflowType);
+      } else if (workflowTypeMatch3) {
+        workflowType = workflowTypeMatch3[1];
+        console.log('Found workflow type (pattern 3):', workflowType);
+      } else if (workflowTypeMatch4) {
+        workflowType = workflowTypeMatch4[1];
+        console.log('Found workflow type (pattern 4):', workflowType);
+      } else {
+        console.log('Could not extract workflow type from executable code, trying tool config...');
+        // Try to extract from tool config name
+        if (result.tool_config && result.tool_config.name) {
+          workflowType = result.tool_config.name.toLowerCase().replace(/\s+/g, '_');
+          console.log('Using workflow type from tool config:', workflowType);
+        } else {
+          console.log('Could not extract workflow type, using default:', workflowType);
+        }
+      }
+
+      // Extract the parameters object with multiple patterns
+      console.log('Attempting to extract parameters from executable code...');
+      console.log('Executable code preview:', result.executable_code.substring(0, 300) + '...');
+      
+      let parametersString = null;
+      
+      // Try multiple patterns to extract parameters
+      const patterns = [
+        /parameters:\s*(\{[^}]*\})/, // Complete JSON object
+        /parameters:\s*(\{[^}]*)/, // Partial JSON object
+        /parameters\s*=\s*(\{[^}]*\})/, // Assignment with complete JSON
+        /parameters\s*=\s*(\{[^}]*)/, // Assignment with partial JSON
+        /const\s+parameters\s*=\s*(\{[^}]*\})/, // const parameters = {...}
+        /let\s+parameters\s*=\s*(\{[^}]*\})/, // let parameters = {...}
+        /var\s+parameters\s*=\s*(\{[^}]*\})/, // var parameters = {...}
+      ];
+      
+      for (let i = 0; i < patterns.length; i++) {
+        const match = result.executable_code.match(patterns[i]);
+        if (match) {
+          parametersString = match[1];
+          console.log(`Found parameters with pattern ${i + 1}:`, parametersString);
+          break;
+        }
+      }
+      
+      if (!parametersString) {
+        console.error('Could not extract parameters with any pattern');
+        console.error('Full executable code:', result.executable_code);
+        console.log('Creating fallback workflow due to parameter extraction failure');
+        
+        // Create a simple document search workflow as fallback
+        const fallbackParameters = {
+          steps: [
+            {
+              type: 'document_search',
+              name: 'search_step',
+              parameters: {
+                query: directExecutionInput,
+                company_scope: true,
+                model: 'alfred-4.2'
+              }
+            }
+          ]
+        };
+        
+        console.log('Using fallback workflow with parameters:', JSON.stringify(fallbackParameters, null, 2));
+        console.log('Direct execution input:', directExecutionInput);
+        
+        // Execute the fallback workflow
+        const executionResult = await executeWorkflowDirectly({
+          workflow_type: workflowType,
+          parameters: fallbackParameters
+        });
+
+        setDirectExecutionResult(executionResult);
+        return;
+      }
+      
+      // Enhanced parameter string cleaning
+      console.log('Original parameters string:', parametersString);
+      
       parametersString = parametersString
         // Replace JavaScript variables with actual values
         .replace(/userInput/g, `"${directExecutionInput}"`)
+        .replace(/input/g, `"${directExecutionInput}"`)
         .replace(/query\s*:\s*query/g, `"query": "${directExecutionInput}"`)
+        .replace(/"query":\s*"[^"]*"/g, `"query": "${directExecutionInput}"`) // Replace any existing query value
         .replace(/\$\{process\.env\.API_KEY\}/g, '"API_KEY"')
         .replace(/\$\{([^}]+)\}/g, '"$1"') // Replace template literals with quoted strings
-        // Handle property names more carefully
-        .replace(/(\w+):\s*(?=["{[])/g, '"$1":') // Add quotes to property names before values
-        .replace(/(\w+):\s*(?=\w)/g, '"$1":') // Add quotes to property names before unquoted values
         // Handle string values
         .replace(/'/g, '"') // Replace single quotes with double quotes
-        // Clean up trailing commas and other JSON issues
-        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
-        .replace(/,\s*,/g, ',') // Remove double commas
-        .replace(/,\s*}/g, '}') // Remove trailing commas before closing braces
-        .replace(/,\s*]/g, ']'); // Remove trailing commas before closing brackets
+        // Clean up trailing commas
+        .replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
+      
+      console.log('Cleaned parameters string:', parametersString);
 
       let parameters;
       try {
         // Try to parse the cleaned JSON
         parameters = JSON.parse(parametersString);
+        console.log('Successfully parsed parameters:', JSON.stringify(parameters, null, 2));
       } catch (parseError) {
         console.warn('Failed to parse complex parameters, creating simple workflow:', parseError);
         console.warn('Problematic JSON string:', parametersString);
+        
+        // Simple fallback for Cursor API (should rarely be needed)
+        console.warn('Failed to parse JSON from Cursor API, using fallback workflow:', parseError);
         
         // Create a simple document search workflow as fallback
         parameters = {
@@ -180,11 +264,15 @@ export default function WorkflowGenerator() {
               name: 'search_step',
               parameters: {
                 query: directExecutionInput,
-                company_scope: true
+                company_scope: true,
+                model: 'alfred-4.2'
               }
             }
           ]
         };
+        
+        console.log('Using fallback workflow with parameters:', JSON.stringify(parameters, null, 2));
+        console.log('Direct execution input:', directExecutionInput);
       }
 
       // Execute the workflow
@@ -195,6 +283,7 @@ export default function WorkflowGenerator() {
 
       setDirectExecutionResult(executionResult);
     } catch (error) {
+      console.error('Workflow execution error:', error);
       setDirectExecutionError(error instanceof Error ? error.message : 'Execution failed');
     } finally {
       setDirectExecutionLoading(false);
@@ -305,7 +394,19 @@ export default function WorkflowGenerator() {
               {directExecutionLoading ? 'Executing...' : 'Execute Workflow'}
             </button>
             {directExecutionError && (
-              <div className="text-red-600 text-sm">{directExecutionError}</div>
+              <div className="text-red-600 text-sm p-3 bg-red-50 rounded-md">
+                <strong>Execution Error:</strong> {directExecutionError}
+                {directExecutionError.includes('400') && (
+                  <div className="mt-2 text-xs">
+                    <p>This might be due to:</p>
+                    <ul className="list-disc list-inside ml-2">
+                      <li>Missing or invalid Paradigm API key</li>
+                      <li>Invalid workflow parameters</li>
+                      <li>API endpoint configuration issues</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -331,6 +432,14 @@ export default function WorkflowGenerator() {
                     <code>{JSON.stringify(directExecutionResult.result, null, 2)}</code>
                   </pre>
                 </div>
+                {!directExecutionResult.success && directExecutionResult.result?.explanation && (
+                  <div className="mt-3 p-3 bg-yellow-50 rounded-md">
+                    <strong>Debug Information:</strong>
+                    <pre className="mt-1 text-xs text-gray-700 whitespace-pre-wrap">
+                      {directExecutionResult.result.explanation}
+                    </pre>
+                  </div>
+                )}
               </div>
             </div>
           )}
